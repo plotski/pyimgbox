@@ -143,7 +143,7 @@ def test_Gallery_submit_file_cannot_open_file(mock_post_json):
 @patch('builtins.open', mock_open(read_data='foo'))
 @patch('mimetypes.guess_type')
 @patch('pyimgbox._utils.post_json')
-def test_Gallery_submit_gets_file_with_unknown_mimetype(mock_post_json, mock_guess_type):
+def test_Gallery_submit_file_gets_file_with_unknown_mimetype(mock_post_json, mock_guess_type):
     mock_guess_type.return_value = (None, None)
     gallery = _upload.Gallery()
     sub = gallery._submit_file('path/to/file.jpg',
@@ -159,7 +159,7 @@ def test_Gallery_submit_gets_file_with_unknown_mimetype(mock_post_json, mock_gue
 @patch('builtins.open', mock_open(read_data='foo'))
 @patch('mimetypes.guess_type')
 @patch('pyimgbox._utils.post_json')
-def test_Gallery_submit_gets_file_with_unsupported_mimetype(mock_post_json, mock_guess_type):
+def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(mock_post_json, mock_guess_type):
     mock_guess_type.return_value = ('text/plain', None)
     gallery = _upload.Gallery()
     sub = gallery._submit_file('path/to/file.txt',
