@@ -206,7 +206,9 @@ class Gallery():
         elif not self._initialized:
             try:
                 self._init()
-            except (ConnectionError, ValueError) as e:
+            except OSError as e:
+                return Submission(success=False, error=e.strerror)
+            except ValueError as e:
                 return Submission(success=False, error=str(e))
 
         content_type = (_const.CONTENT_TYPES['adult'] if nsfw
