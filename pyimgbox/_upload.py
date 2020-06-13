@@ -134,17 +134,16 @@ class Gallery():
         try:
             fileobj = open(filepath, 'rb')
         except OSError as e:
-            return Submission(success=False, error=f'{filepath}: {e.strerror}',
-                              **submission)
+            return Submission(success=False, error=e.strerror, **submission)
 
         mimetype = mimetypes.guess_type(filepath)[0]
         if not mimetype:
             return Submission(success=False,
-                              error=f'{filepath}: Unknown mime type',
+                              error=f'Unknown mime type',
                               **submission)
         if mimetype not in _const.ALLOWED_MIMETYPES:
             return Submission(success=False,
-                              error=f'{filepath}: Unsupported file type: {mimetype}',
+                              error=f'Unsupported file type: {mimetype}',
                               **submission)
 
         data = [

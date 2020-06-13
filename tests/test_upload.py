@@ -135,7 +135,7 @@ def test_Gallery_submit_file_cannot_open_file(mock_post_json):
                                thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[200],
                                timeout=123)
     assert sub == {'success': False,
-                   'error': 'this/file/does/not/exist.jpg: No such file or directory',
+                   'error': 'No such file or directory',
                    'filename': 'exist.jpg',
                    'filepath': 'this/file/does/not/exist.jpg'}
 
@@ -151,7 +151,7 @@ def test_Gallery_submit_file_gets_file_with_unknown_mimetype(mock_post_json, moc
                                thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[200],
                                timeout=123)
     assert sub == {'success': False,
-                   'error': 'path/to/file.jpg: Unknown mime type',
+                   'error': 'Unknown mime type',
                    'filename': 'file.jpg',
                    'filepath': 'path/to/file.jpg'}
 
@@ -167,6 +167,6 @@ def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(mock_post_json,
                                thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[200],
                                timeout=123)
     assert sub == {'success': False,
-                   'error': 'path/to/file.txt: Unsupported file type: text/plain',
+                   'error': 'Unsupported file type: text/plain',
                    'filename': 'file.txt',
                    'filepath': 'path/to/file.txt'}
