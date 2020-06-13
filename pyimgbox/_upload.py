@@ -170,11 +170,11 @@ class Gallery():
 
         log.debug('POST response:\n%s', pprint.pformat(json))
         if 'files' not in json:
-            raise RuntimeError("Couldn't find 'files' in response: {json}")
+            raise RuntimeError(f"Unexpected response: Couldn't find 'files': {json}")
         elif not isinstance(json['files'], list):
-            raise RuntimeError("'files' in response is not a list: {json}")
+            raise RuntimeError(f"Unexpected response: 'files' is not a list: {json}")
         elif not json['files']:
-            raise RuntimeError("'files' in response is empty: {json}")
+            raise RuntimeError(f"Unexpected response: 'files' is empty: {json}")
 
         info = json['files'][0]
         return Submission(
