@@ -3,6 +3,7 @@ from pyimgbox import _const
 
 from unittest.mock import patch, call, Mock, mock_open
 import pytest
+import random
 
 
 def test_Submission_needs_success_key():
@@ -316,3 +317,130 @@ def test_Gallery_submit_file_succeeds(mock_post_json):
         gallery_url=_const.GALLERY_URL_FORMAT.format(**mock_token),
         edit_url=_const.EDIT_URL_FORMAT.format(**mock_token),
     )
+
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_does_not_inititialize_without_filepaths():
+    gallery = _upload.Gallery()
+    mock_init = Mock()
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        assert mock_init.call_args_list == []
+        assert tuple(gallery.submit()) == ()
+        assert mock_init.call_args_list == []
+        assert mock_submit_file.call_args_list == []
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_calls_inititializes_automatically_but_only_once():
+    filepaths = ('foo.jpg', 'bar.jpg')
+    gallery = _upload.Gallery()
+    mock_init = Mock()
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        assert mock_init.call_args_list == []
+        for sub in gallery.submit(*filepaths):
+            assert mock_init.call_args_list == [call()]
+        assert mock_submit_file.call_args_list == [call('foo.jpg',
+                                                        _const.CONTENT_TYPES['family'],
+                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
+                                                        timeout=None),
+                                                   call('bar.jpg',
+                                                        _const.CONTENT_TYPES['family'],
+                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
+                                                        timeout=None)]
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_catches_OSError_from_init():
+    filepaths = ('foo.jpg', 'bar.jpg')
+    gallery = _upload.Gallery()
+    mock_init = Mock(side_effect=ConnectionError(101, 'Argh'))
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        for sub in gallery.submit(*filepaths):
+            assert sub == _upload.Submission(success=False, error='Argh')
+        assert mock_submit_file.call_args_list == []
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_catches_ValueError_from_init():
+    filepaths = ('foo.jpg', 'bar.jpg')
+    gallery = _upload.Gallery()
+    mock_init = Mock(side_effect=ValueError('Argh'))
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        for sub in gallery.submit(*filepaths):
+            assert sub == _upload.Submission(success=False, error='Argh')
+        assert mock_submit_file.call_args_list == []
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_handles_nsfw_argument():
+    filepaths = ('path/to/foo.jpg',)
+    gallery = _upload.Gallery()
+    mock_init = Mock()
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        for sub in gallery.submit(*filepaths, nsfw=False):
+            pass
+        assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                        _const.CONTENT_TYPES['family'],
+                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
+                                                        timeout=None)]
+        mock_submit_file.reset_mock()
+        for sub in gallery.submit(*filepaths, nsfw=True):
+            pass
+        assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                        _const.CONTENT_TYPES['adult'],
+                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
+                                                        timeout=None)]
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_handles_thumb_width_and_square_thumbs_arguments():
+    filepaths = ('path/to/foo.jpg',)
+    gallery = _upload.Gallery()
+    mock_init = Mock()
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        for (width, code) in _const.THUMBNAIL_WIDTHS_SQUARE.items():
+            # Provide existing thumb_width
+            for sub in gallery.submit(*filepaths, thumb_width=width, square_thumbs=True):
+                pass
+            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                            _const.CONTENT_TYPES['family'],
+                                                            code,
+                                                            timeout=None)]
+            mock_submit_file.reset_mock()
+            # Provide any thumb_width and automatically pick closest existing
+            for sub in gallery.submit(*filepaths,
+                                      thumb_width=width+random.randint(-10, 10),
+                                      square_thumbs=True):
+                pass
+            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                            _const.CONTENT_TYPES['family'],
+                                                            code,
+                                                            timeout=None)]
+            mock_submit_file.reset_mock()
+
+        for (width, code) in _const.THUMBNAIL_WIDTHS_KEEP_ASPECT.items():
+            # Provide existing thumb_width
+            for sub in gallery.submit(*filepaths, thumb_width=width, square_thumbs=False):
+                pass
+            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                            _const.CONTENT_TYPES['family'],
+                                                            code,
+                                                            timeout=None)]
+            mock_submit_file.reset_mock()
+            # Provide any thumb_width and automatically pick closest existing
+            for sub in gallery.submit(*filepaths,
+                                      thumb_width=width+random.randint(-10, 10),
+                                      square_thumbs=False):
+                pass
+            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                            _const.CONTENT_TYPES['family'],
+                                                            code,
+                                                            timeout=None)]
+            mock_submit_file.reset_mock()
