@@ -17,7 +17,7 @@ def main():
     import json
     args = _get_cli_args()
     gallery = pyimgbox.Gallery(title=args.title, comments_enabled=args.comments)
-    for submission in gallery.submit(*args.files, thumb_width=200):
+    for submission in gallery.submit(*args.files, thumb_width=args.thumbnail_size):
         print(json.dumps(submission, indent=4))
 
 
@@ -26,6 +26,8 @@ def _get_cli_args():
     argparser = argparse.ArgumentParser(description='Upload images to imgbox.com')
     argparser.add_argument('files', nargs='+',
                            help='Image files to upload')
+    argparser.add_argument('--thumbnail-size', '-s', default=200, type=int,
+                           help='Thumbnail width in pixels')
     argparser.add_argument('--title', '-t', default=None,
                            help='Gallery title')
     argparser.add_argument('--comments', '-c', action='store_true',
