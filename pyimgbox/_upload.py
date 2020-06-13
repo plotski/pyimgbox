@@ -185,7 +185,7 @@ class Gallery():
             thumbnail_url=info['thumbnail_url'],
             web_url=info['url'],
             gallery_url=_const.GALLERY_URL_FORMAT.format(**self._token),
-            edit_url=_const.EDIT_URL_FORMAT.format(**self._token)
+            edit_url=_const.EDIT_URL_FORMAT.format(**self._token),
         )
 
     def submit(self, *filepaths, nsfw=False, thumb_width=100, square_thumbs=False, timeout=None):
