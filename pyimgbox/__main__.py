@@ -22,6 +22,7 @@ def main():
 
 
 def _get_cli_args():
+    import pyimgbox
     import argparse
     argparser = argparse.ArgumentParser(description='Upload images to imgbox.com')
     argparser.add_argument('files', nargs='+',
@@ -32,5 +33,7 @@ def _get_cli_args():
                            help='Gallery title')
     argparser.add_argument('--comments', '-c', action='store_true',
                            help='Enable comments')
+    argparser.add_argument('--version', '-V', action='version',
+                           version=f'%(prog)s {pyimgbox.__version__}')
     args = argparser.parse_args()
     return args
