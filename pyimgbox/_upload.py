@@ -131,7 +131,6 @@ class Gallery():
         submission = {'filename': os.path.basename(filepath),
                       'filepath': filepath}
 
-        print(open)
         try:
             fileobj = open(filepath, 'rb')
         except OSError as e:
