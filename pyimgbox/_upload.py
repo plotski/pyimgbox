@@ -162,9 +162,10 @@ class Gallery():
             json = _utils.post_json(self._session, _const.PROCESS_URL,
                                     data=data, files=files, timeout=timeout)
         except OSError as e:
-            # Raised when fileobj.read() fails
+            # Raised when connection fails or fileobj.read() fails
             return Submission(success=False, error=e.strerror, **submission)
-        except (ConnectionError, ValueError) as e:
+        except ValueError as e:
+            # Raised when remote side returns non-JSON
             return Submission(success=False, error=str(e), **submission)
 
         log.debug('POST response:\n%s', pprint.pformat(json))
