@@ -170,3 +170,149 @@ def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(mock_post_json,
                    'error': 'Unsupported file type: text/plain',
                    'filename': 'file.txt',
                    'filepath': 'path/to/file.txt'}
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('builtins.open', mock_open(read_data='foo'))
+@patch('pyimgbox._utils.post_json')
+def test_Gallery_submit_file_raises_OSError(mock_post_json):
+    gallery = _upload.Gallery()
+    mock_token = {'token_id': '123', 'token_secret': '456',
+                  'gallery_id': 'abc', 'gallery_secret': 'def'}
+    gallery._token = mock_token
+    mock_post_json.side_effect = ConnectionError(101, 'Network is unreachable')
+    sub = gallery._submit_file('path/to/file.jpg',
+                               content_type=_const.CONTENT_TYPES['family'],
+                               thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[200],
+                               timeout=123)
+    assert sub == {'success': False,
+                   'error': 'Network is unreachable',
+                   'filename': 'file.jpg',
+                   'filepath': 'path/to/file.jpg'}
+    assert mock_post_json.call_args_list == [
+        call(
+            gallery._session, _const.PROCESS_URL,
+            data=[
+                ('token_id', mock_token['token_id']),
+                ('token_secret', mock_token['token_secret']),
+                ('content_type', _const.CONTENT_TYPES['family']),
+                ('thumbnail_size', _const.THUMBNAIL_WIDTHS_SQUARE[200]),
+                ('gallery_id', mock_token['gallery_id']),
+                ('gallery_secret', mock_token['gallery_secret']),
+                ('comments_enabled', '0'),
+            ],
+            files=[('files[]', ('file.jpg',
+                                open('path/to/file.jpg'),
+                                'image/jpeg'))],
+            timeout=123,
+        )
+    ]
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('builtins.open', mock_open(read_data='foo'))
+@patch('pyimgbox._utils.post_json')
+def test_Gallery_submit_file_raises_ValueError(mock_post_json):
+    gallery = _upload.Gallery()
+    mock_token = {'token_id': '123', 'token_secret': '456',
+                  'gallery_id': 'abc', 'gallery_secret': 'def'}
+    gallery._token = mock_token
+    mock_post_json.side_effect = ValueError('Error while parsing JSON')
+    sub = gallery._submit_file('path/to/file.jpg',
+                               content_type=_const.CONTENT_TYPES['adult'],
+                               thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[300],
+                               timeout=12)
+    assert sub == {'success': False,
+                   'error': 'Error while parsing JSON',
+                   'filename': 'file.jpg',
+                   'filepath': 'path/to/file.jpg'}
+    assert mock_post_json.call_args_list == [
+        call(
+            gallery._session, _const.PROCESS_URL,
+            data=[
+                ('token_id', mock_token['token_id']),
+                ('token_secret', mock_token['token_secret']),
+                ('content_type', _const.CONTENT_TYPES['adult']),
+                ('thumbnail_size', _const.THUMBNAIL_WIDTHS_SQUARE[300]),
+                ('gallery_id', mock_token['gallery_id']),
+                ('gallery_secret', mock_token['gallery_secret']),
+                ('comments_enabled', '0'),
+            ],
+            files=[('files[]', ('file.jpg',
+                                open('path/to/file.jpg'),
+                                'image/jpeg'))],
+            timeout=12,
+        )
+    ]
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('builtins.open', mock_open(read_data='foo'))
+@patch('pyimgbox._utils.post_json')
+def test_Gallery_submit_file_gets_json_response_without_files_field(mock_post_json):
+    gallery = _upload.Gallery()
+    mock_token = {'token_id': '123', 'token_secret': '456',
+                  'gallery_id': 'abc', 'gallery_secret': 'def'}
+    gallery._token = mock_token
+    mock_post_json.return_value = {'not files': 'asdf'}
+    with pytest.raises(RuntimeError) as cm:
+        gallery._submit_file('path/to/file.jpg',
+                             content_type=_const.CONTENT_TYPES['adult'],
+                             thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[300],
+                             timeout=12)
+    assert str(cm.value) == "Unexpected response: Couldn't find 'files': {'not files': 'asdf'}"
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('builtins.open', mock_open(read_data='foo'))
+@patch('pyimgbox._utils.post_json')
+def test_Gallery_submit_file_gets_json_response_with_nonlist_files_field(mock_post_json):
+    gallery = _upload.Gallery()
+    mock_token = {'token_id': '123', 'token_secret': '456',
+                  'gallery_id': 'abc', 'gallery_secret': 'def'}
+    gallery._token = mock_token
+    mock_post_json.return_value = {'files': 'asdf'}
+    with pytest.raises(RuntimeError) as cm:
+        gallery._submit_file('path/to/file.jpg',
+                             content_type=_const.CONTENT_TYPES['adult'],
+                             thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[300],
+                             timeout=12)
+    assert str(cm.value) == "Unexpected response: 'files' is not a list: {'files': 'asdf'}"
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('builtins.open', mock_open(read_data='foo'))
+@patch('pyimgbox._utils.post_json')
+def test_Gallery_submit_file_gets_json_response_with_files_field(mock_post_json):
+    gallery = _upload.Gallery()
+    mock_token = {'token_id': '123', 'token_secret': '456',
+                  'gallery_id': 'abc', 'gallery_secret': 'def'}
+    gallery._token = mock_token
+    mock_post_json.return_value = {'files': []}
+    with pytest.raises(RuntimeError) as cm:
+        gallery._submit_file('path/to/file.jpg',
+                             content_type=_const.CONTENT_TYPES['adult'],
+                             thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[300],
+                             timeout=12)
+    assert str(cm.value) == "Unexpected response: 'files' is empty: {'files': []}"
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('builtins.open', mock_open(read_data='foo'))
+@patch('pyimgbox._utils.post_json')
+def test_Gallery_submit_file_succeeds(mock_post_json):
+    gallery = _upload.Gallery()
+    mock_token = {'token_id': '123', 'token_secret': '456',
+                  'gallery_id': 'abc', 'gallery_secret': 'def'}
+    gallery._token = mock_token
+    mock_post_json.return_value = {'files': [{'original_url': 'https://foo.example.org/asdf.jpg',
+                                              'thumbnail_url': 'https://foo.example.org/asdf_t.jpg',
+                                              'url': 'https://foo.example.org/asdf'}]}
+    sub = gallery._submit_file('path/to/file.jpg',
+                               content_type=_const.CONTENT_TYPES['adult'],
+                               thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[300],
+                               timeout=12)
+    assert sub == _upload.Submission(
+        success=True,
+        filename='file.jpg',
+        filepath='path/to/file.jpg',
+        image_url='https://foo.example.org/asdf.jpg',
+        thumbnail_url='https://foo.example.org/asdf_t.jpg',
+        web_url='https://foo.example.org/asdf',
+        gallery_url=_const.GALLERY_URL_FORMAT.format(**mock_token),
+        edit_url=_const.EDIT_URL_FORMAT.format(**mock_token),
+    )
