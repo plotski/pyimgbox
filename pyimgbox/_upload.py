@@ -201,7 +201,9 @@ class Gallery():
 
         Yield Submission objects.
         """
-        if not self._initialized and filepaths:
+        if not filepaths:
+            return
+        elif not self._initialized:
             try:
                 self._init()
             except (ConnectionError, ValueError) as e:
