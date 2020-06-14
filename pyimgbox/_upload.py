@@ -14,7 +14,6 @@
 import mimetypes
 import os
 import pprint
-from collections.abc import Mapping
 
 import requests
 import bs4
