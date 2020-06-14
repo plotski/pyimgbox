@@ -55,7 +55,7 @@ class Submission(dict):
         if not success:
             assert 'error' in kwargs, "Missing key: 'error'"
         else:
-            assert 'error' not in kwargs, f"Conflicting keys: 'error', 'success'"
+            assert 'error' not in kwargs, "Conflicting keys: 'error', 'success'"
             for k in ('filename', 'filepath', 'image_url', 'thumbnail_url',
                       'web_url', 'gallery_url', 'edit_url'):
                 assert k in kwargs, f'Missing key: {k!r}'
@@ -138,7 +138,7 @@ class Gallery():
         mimetype = mimetypes.guess_type(filepath)[0]
         if not mimetype:
             return Submission(success=False,
-                              error=f'Unknown mime type',
+                              error='Unknown mime type',
                               **submission)
         if mimetype not in _const.ALLOWED_MIMETYPES:
             return Submission(success=False,
