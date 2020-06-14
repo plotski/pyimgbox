@@ -444,3 +444,18 @@ def test_Gallery_submit_handles_thumb_width_and_square_thumbs_arguments():
                                                             code,
                                                             timeout=None)]
             mock_submit_file.reset_mock()
+
+@patch('pyimgbox._utils.get', Mock())
+@patch('pyimgbox._utils.post_json', Mock())
+def test_Gallery_submit_handles_timeout_argument():
+    filepaths = ('path/to/foo.jpg',)
+    gallery = _upload.Gallery()
+    mock_init = Mock()
+    mock_submit_file = Mock()
+    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
+        for sub in gallery.submit(*filepaths, timeout=999):
+            pass
+        assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                        _const.CONTENT_TYPES['family'],
+                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
+                                                        timeout=999)]
