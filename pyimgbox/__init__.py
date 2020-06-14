@@ -15,4 +15,5 @@ __version__ = '0.0.1'
 __author__ = 'plotski'
 __author_email__ = 'plotski@example.org'
 
-from ._upload import Gallery, Submission
+
+from ._upload import Gallery, Submission  # noqa: F401
