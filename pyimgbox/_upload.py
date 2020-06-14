@@ -163,7 +163,7 @@ class Gallery():
                                     data=data, files=files, timeout=timeout)
         except OSError as e:
             # Raised when connection fails or fileobj.read() fails
-            return Submission(success=False, error=e.strerror, **submission)
+            return Submission(success=False, error=str(e), **submission)
         except ValueError as e:
             # Raised when remote side returns non-JSON
             return Submission(success=False, error=str(e), **submission)
@@ -206,10 +206,9 @@ class Gallery():
         elif not self._initialized:
             try:
                 self._init()
-            except OSError as e:
-                return Submission(success=False, error=e.strerror)
-            except ValueError as e:
-                return Submission(success=False, error=str(e))
+            except (OSError, ValueError) as e:
+                yield Submission(success=False, error=str(e))
+                return
 
         content_type = (_const.CONTENT_TYPES['adult'] if nsfw
                         else _const.CONTENT_TYPES['family'])

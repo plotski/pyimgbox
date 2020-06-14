@@ -180,7 +180,7 @@ def test_Gallery_submit_file_raises_OSError(mock_post_json):
     mock_token = {'token_id': '123', 'token_secret': '456',
                   'gallery_id': 'abc', 'gallery_secret': 'def'}
     gallery._token = mock_token
-    mock_post_json.side_effect = ConnectionError(101, 'Network is unreachable')
+    mock_post_json.side_effect = ConnectionError('Network is unreachable')
     sub = gallery._submit_file('path/to/file.jpg',
                                content_type=_const.CONTENT_TYPES['family'],
                                thumbnail_size=_const.THUMBNAIL_WIDTHS_SQUARE[200],
@@ -356,7 +356,7 @@ def test_Gallery_submit_calls_inititializes_automatically_but_only_once():
 def test_Gallery_submit_catches_OSError_from_init():
     filepaths = ('foo.jpg', 'bar.jpg')
     gallery = _upload.Gallery()
-    mock_init = Mock(side_effect=ConnectionError(101, 'Argh'))
+    mock_init = Mock(side_effect=ConnectionError('Argh'))
     mock_submit_file = Mock()
     with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
         for sub in gallery.submit(*filepaths):
