@@ -5,5 +5,4 @@ __pycache__/
 .pytest_cache
 .python-version
 .tox
-tox.ini
 venv
