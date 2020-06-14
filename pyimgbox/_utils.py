@@ -15,7 +15,7 @@ import requests
 
 from . import _const
 
-import logging
+import logging  # isort:skip
 log = logging.getLogger('pyimgbox')
 
 

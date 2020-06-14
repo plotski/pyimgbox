@@ -1,9 +1,9 @@
-from pyimgbox import _upload
-from pyimgbox import _const
-
-from unittest.mock import patch, call, Mock, mock_open
-import pytest
 import random
+from unittest.mock import Mock, call, mock_open, patch
+
+import pytest
+
+from pyimgbox import _const, _upload
 
 
 def test_Submission_needs_success_key():

@@ -1,10 +1,9 @@
-from pyimgbox import _utils
-from pyimgbox import _const
+from unittest.mock import Mock, call
 
-from unittest.mock import call, Mock
 import pytest
-
 import requests
+
+from pyimgbox import _const, _utils
 
 
 def test_get_succeeds():

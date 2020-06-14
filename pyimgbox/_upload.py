@@ -11,17 +11,16 @@
 # You should have received a copy of the GNU General Public License along with this
 # program.  If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 import mimetypes
 import os
 import pprint
 
-import requests
 import bs4
+import requests
 
-from . import _utils
-from . import _const
+from . import _const, _utils
 
-import logging
 log = logging.getLogger('pyimgbox')
 
 class Submission(dict):
