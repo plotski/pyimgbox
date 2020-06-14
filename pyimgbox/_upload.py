@@ -23,6 +23,7 @@ from . import _const, _utils
 
 log = logging.getLogger('pyimgbox')
 
+
 class Submission(dict):
     """
     Dictionary with the following keys:

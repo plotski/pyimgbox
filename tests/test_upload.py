@@ -416,7 +416,7 @@ def test_Gallery_submit_handles_thumb_width_and_square_thumbs_arguments():
             mock_submit_file.reset_mock()
             # Provide any thumb_width and automatically pick closest existing
             for sub in gallery.submit(*filepaths,
-                                      thumb_width=width+random.randint(-10, 10),
+                                      thumb_width=width + random.randint(-10, 10),
                                       square_thumbs=True):
                 pass
             assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
@@ -436,7 +436,7 @@ def test_Gallery_submit_handles_thumb_width_and_square_thumbs_arguments():
             mock_submit_file.reset_mock()
             # Provide any thumb_width and automatically pick closest existing
             for sub in gallery.submit(*filepaths,
-                                      thumb_width=width+random.randint(-10, 10),
+                                      thumb_width=width + random.randint(-10, 10),
                                       square_thumbs=False):
                 pass
             assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',

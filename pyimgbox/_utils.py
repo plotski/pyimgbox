@@ -32,7 +32,6 @@ def post_json(session, url, timeout=None, **kwargs):
     try:
         response = session.post(url, timeout=timeout or _const.DEFAULT_TIMEOUT, **kwargs)
     except requests.ConnectionError:
-        raise
         raise ConnectionError(f'Failed to connect to {_const.SERVICE_DOMAIN}')
     else:
         log.debug('Response text for %s: %r', url, response.text)
