@@ -16,6 +16,12 @@ def main():
     import pyimgbox
     import json
     args = _get_cli_args()
+
+    if args.debug:
+        import logging
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(module)s: %(message)s')
+
     gallery = pyimgbox.Gallery(title=args.title, comments_enabled=args.comments)
     for submission in gallery.submit(*args.files, thumb_width=args.thumbnail_size):
         print(json.dumps(submission, indent=4))
@@ -35,5 +41,7 @@ def _get_cli_args():
                            help='Enable comments')
     argparser.add_argument('--version', '-V', action='version',
                            version=f'%(prog)s {pyimgbox.__version__}')
+    argparser.add_argument('--debug', action='store_true',
+                           help='Print debugging information')
     args = argparser.parse_args()
     return args
