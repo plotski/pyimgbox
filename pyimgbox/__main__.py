@@ -22,8 +22,10 @@ def main():
                             format='%(module)s: %(message)s')
 
     gallery = pyimgbox.Gallery(title=args.title,
-                               comments_enabled=args.comments,
-                               thumb_width=args.thumbnail_size)
+                               adult=args.adult,
+                               thumb_width=args.thumbnail_size,
+                               square_thumbs=args.square_thumbs,
+                               comments_enabled=args.comments)
     if args.json:
         _json_output(gallery, args.files)
     else:
@@ -77,10 +79,14 @@ def _get_cli_args():
     argparser = argparse.ArgumentParser(description='Upload images to imgbox.com')
     argparser.add_argument('files', nargs='+',
                            help='Image files to upload')
-    argparser.add_argument('--thumbnail-size', '-s', default=200, type=int,
-                           help='Thumbnail width in pixels')
     argparser.add_argument('--title', '-t', default=None,
                            help='Gallery title')
+    argparser.add_argument('--thumbnail-size', '-s', default=100, type=int,
+                           help='Thumbnail width in pixels')
+    argparser.add_argument('--adult', '-a', action='store_true',
+                           help='Mark gallery as adult-only')
+    argparser.add_argument('--square-thumbs', '-q', action='store_true',
+                           help='Make square thumbnails')
     argparser.add_argument('--comments', '-c', action='store_true',
                            help='Enable comments')
     argparser.add_argument('--json', '-j', action='store_true',
