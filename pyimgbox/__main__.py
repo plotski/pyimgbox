@@ -23,7 +23,7 @@ def main():
 
     gallery = pyimgbox.Gallery(title=args.title,
                                adult=args.adult,
-                               thumb_width=args.thumbnail_size,
+                               thumb_width=args.thumb_width,
                                square_thumbs=args.square_thumbs,
                                comments_enabled=args.comments)
     if args.json:
@@ -81,7 +81,7 @@ def _get_cli_args():
                            help='Image files to upload')
     argparser.add_argument('--title', '-t', default=None,
                            help='Gallery title')
-    argparser.add_argument('--thumbnail-size', '-s', default=100, type=int,
+    argparser.add_argument('--thumb-width', '-w', default=100, type=int,
                            help='Thumbnail width in pixels')
     argparser.add_argument('--adult', '-a', action='store_true',
                            help='Mark gallery as adult-only')

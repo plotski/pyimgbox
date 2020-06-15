@@ -3,13 +3,13 @@ Easy uploading to [imgbox.com](https://imgbox.com/).
 - CLI tool
 
     ```sh
-    $ imgbox foo.jpg bar.png --title "My Gallery" --thumbnail-size 500
+    $ imgbox foo.jpg bar.png --title "My Gallery" --thumb-width 500
     ```
 
 - Shell script to generate BBCode
 
     ```sh
-    imgbox --json --thumbnail-size 350 "$@" > images.json
+    imgbox --json --thumb-width 350 "$@" > images.json
     echo "[url=$(jq -r '.gallery_url' < images.json)]Gallery[/url]"
     echo "[url=$(jq -r '.edit_url' < images.json)]Edit Gallery[/url]"
     while read image; do

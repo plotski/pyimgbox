@@ -1,6 +1,7 @@
 2020-06-?? 0.2.0
   * Redesign Gallery class and CLI tool
   * Added options --adult and --square-thumbs
+  * Option --thumbnail-size was renamed to --thumb-width
 
 
 2020-06-14 0.1.0
