@@ -35,7 +35,7 @@ class Submission(dict):
     image_url: URL to image or None
     web_url: URL to image's web page or None
     gallery_url: URL to web page of thumbnails or None
-    edit_url: URL to manage gallery None
+    edit_url: URL to manage gallery or None
     """
 
     def __new__(cls, *, success, **kwargs):
