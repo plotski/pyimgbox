@@ -36,6 +36,8 @@ class Submission(dict):
     web_url: URL to image's web page or None
     gallery_url: URL to web page of thumbnails or None
     edit_url: URL to manage gallery or None
+
+    All keys are also available as attributes for convenience.
     """
 
     def __new__(cls, *, success, **kwargs):
@@ -61,6 +63,13 @@ class Submission(dict):
                 assert k in kwargs, f'Missing key: {k!r}'
         values.update(kwargs)
         return super().__new__(cls, values)
+
+    def __getattr__(self, name):
+        value = self.get(name)
+        if value is None:
+            raise AttributeError(name)
+        else:
+            return value
 
     def __repr__(self):
         kwargs = ', '.join(f'{k}={v!r}'
