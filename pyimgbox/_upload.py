@@ -83,30 +83,125 @@ class Gallery():
     Upload images to a gallery on imgbox.com
 
     title: Name of the Gallery
+    adult: True if any images are adult content, False otherwise
+    thumb_width: Thumbnail width in pixels; will automoatically snap to
+                 nearest supported value
+    square_thumbs: True to make thumbnails square, False otherwise
     comments_enabled: Whether comments are enabled for this gallery
     """
 
-    def __init__(self, title=None, comments_enabled=False):
-        self._title = str(title) if title else None
-        self._comments_enabled = bool(comments_enabled)
+    def __init__(self, title=None, thumb_width=100, square_thumbs=False,
+                 adult=False, comments_enabled=False):
         self._session = requests.Session()
         self._token = {}
+        self.title = title
+        self.square_thumbs = square_thumbs
+        self.thumb_width = thumb_width
+        self.adult = adult
+        self.comments_enabled = comments_enabled
 
     @property
     def title(self):
-        """Name of the Gallery"""
+        """
+        Name of this gallery or None
+
+        This property can not be changed after create() was called.
+        """
         return self._title
+
+    @title.setter
+    def title(self, value):
+        if self.created:
+            raise RuntimeError('Gallery was already created')
+        else:
+            self._title = str(value) if value is not None else None
+
+    @property
+    def thumb_width(self):
+        """Width of thumbnails for this gallery"""
+        return getattr(self, '_thumb_width', 100)
+
+    @thumb_width.setter
+    def thumb_width(self, value):
+        if not isinstance(value, (int, float)):
+            raise ValueError(f'Not a number: {value!r}')
+        self._thumb_width = _utils.find_closest_number(int(value), self._thumb_widths)
+        self._thumbnail_width = self._thumb_widths[self._thumb_width]
+
+    @property
+    def square_thumbs(self):
+        """Whether thumbnails have the same height and width"""
+        return self._square_thumbs
+
+    @square_thumbs.setter
+    def square_thumbs(self, value):
+        if value:
+            self._square_thumbs = True
+            self._thumb_widths = _const.THUMBNAIL_WIDTHS_SQUARE
+        else:
+            self._square_thumbs = False
+            self._thumb_widths = _const.THUMBNAIL_WIDTHS_KEEP_ASPECT
+        self.thumb_width = self.thumb_width
+
+    @property
+    def adult(self):
+        """Whether images are for adults only"""
+        return self._content_type != _const.CONTENT_TYPES['family']
+
+    @adult.setter
+    def adult(self, value):
+        self._content_type = (_const.CONTENT_TYPES['adult'] if value
+                              else _const.CONTENT_TYPES['family'])
 
     @property
     def comments_enabled(self):
-        """Whether comments are enabled for this gallery"""
+        """
+        Whether comments are enabled for this gallery
+
+        This property can not be changed after create() was called.
+        """
         return self._comments_enabled
 
+    @comments_enabled.setter
+    def comments_enabled(self, value):
+        if self.created:
+            raise RuntimeError('Gallery was already created')
+        else:
+            self._comments_enabled = bool(value)
+
     @property
-    def _initialized(self):
+    def url(self):
+        """URL to gallery of thumbnails or None if create() was not called yet"""
+        if self._token:
+            return _const.GALLERY_URL_FORMAT.format(**self._token)
+        else:
+            return None
+
+    @property
+    def edit_url(self):
+        """URL to manage gallery or None if create() was not called yet"""
+        if self._token:
+            return _const.EDIT_URL_FORMAT.format(**self._token)
+        else:
+            return None
+
+    @property
+    def created(self):
+        """Whether this gallery was created remotely"""
         return bool(_const.CSRF_TOKEN_HEADER in self._session.headers and self._token)
 
-    def _init(self):
+    def create(self):
+        """
+        Create gallery remotely
+
+        Raise ConnectionError if the creation request fails.
+
+        Raise RuntimeError if this method is called twice or if the server
+        responds in an unexpected way.
+        """
+        if self.created:
+            raise RuntimeError('Gallery was already created')
+
         # Get CSRF token
         csrf_token = None
         text = _utils.get(self._session, f'https://{_const.SERVICE_DOMAIN}/', timeout=30)
@@ -121,7 +216,7 @@ class Gallery():
         else:
             self._session.headers.update({_const.CSRF_TOKEN_HEADER: csrf_token})
 
-        # Get token_id / token_secret
+        # Get token_id / token_secret + gallery_id / gallery_secret
         data = [
             ('gallery', 'true'),
             ('gallery_title', self._title or ''),
@@ -196,42 +291,27 @@ class Gallery():
             edit_url=_const.EDIT_URL_FORMAT.format(**self._token),
         )
 
-    def submit(self, *filepaths, nsfw=False, thumb_width=100, square_thumbs=False, timeout=None):
+    def add(self, *filepaths, timeout=None):
         """
-        Generator that uploads images and yields dictionaries with URLs
+        Upload images to this gallery, yield Submission objects
 
-        filepaths: Iterable of file paths to images
-        nsfw: True if any images are adult content, False otherwise
-        thumb_width: Thumbnail width in pixels; will automoatically snap to closest
-                     supported value
-        square_thumbs: True to make thumbnails square, False otherwise
-        timeout: Number of seconds of no sign of life before giving up
+        filepaths: Iterable of image file paths
+        timeout: Number of seconds of no server response before giving up
 
-        Yield Submission objects.
+        Raise RuntimeError if create() was not called first
         """
-        if not filepaths:
-            return
-        elif not self._initialized:
-            try:
-                self._init()
-            except (OSError, ValueError) as e:
-                yield Submission(success=False, error=str(e))
-                return
-
-        content_type = (_const.CONTENT_TYPES['adult'] if nsfw
-                        else _const.CONTENT_TYPES['family'])
-
-        if square_thumbs:
-            thumbnail_widths = _const.THUMBNAIL_WIDTHS_SQUARE
-        else:
-            thumbnail_widths = _const.THUMBNAIL_WIDTHS_KEEP_ASPECT
-        thumbnail_width = thumbnail_widths[
-            _utils.find_closest_number(thumb_width, thumbnail_widths)]
-
+        if not self.created:
+            raise RuntimeError('create() must be called first')
         for filepath in filepaths:
-            yield self._submit_file(filepath, content_type, thumbnail_width, timeout=timeout)
+            yield self._submit_file(filepath,
+                                    self._content_type,
+                                    self._thumbnail_width,
+                                    timeout=timeout)
 
     def __repr__(self):
         return (f'{type(self).__name__}('
-                f'title={repr(self._title)}, '
+                f'title={repr(self.title)}, '
+                f'thumb_width={repr(self.thumb_width)}, '
+                f'square_thumbs={repr(self.square_thumbs)}, '
+                f'adult={repr(self.adult)}, '
                 f'comments_enabled={repr(self._comments_enabled)})')

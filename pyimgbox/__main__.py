@@ -14,7 +14,6 @@
 
 def main():
     import pyimgbox
-    import json
     args = _get_cli_args()
 
     if args.debug:
@@ -22,9 +21,54 @@ def main():
         logging.basicConfig(level=logging.DEBUG,
                             format='%(module)s: %(message)s')
 
-    gallery = pyimgbox.Gallery(title=args.title, comments_enabled=args.comments)
-    for submission in gallery.submit(*args.files, thumb_width=args.thumbnail_size):
-        print(json.dumps(submission, indent=4))
+    gallery = pyimgbox.Gallery(title=args.title,
+                               comments_enabled=args.comments,
+                               thumb_width=args.thumbnail_size)
+    if args.json:
+        _json_output(gallery, args.files)
+    else:
+        _text_output(gallery, args.files)
+
+
+def _text_output(gallery, filepaths):
+    try:
+        gallery.create()
+    except ConnectionError as e:
+        print(str(e))
+    else:
+        print(f'Gallery: {gallery.url}')
+        print(f'   Edit: {gallery.edit_url}')
+        for sub in gallery.add(*filepaths):
+            print(f'* {sub.filepath}')
+            if sub.success:
+                print(f'      Image: {sub.image_url}')
+                print(f'  Thumbnail: {sub.thumbnail_url}')
+                print(f'    Webpage: {sub.web_url}')
+            else:
+                print(f'  {sub.error}')
+
+
+def _json_output(gallery, filepaths):
+    info = {'success': None,
+            'error': None,
+            'gallery_url': None,
+            'edit_url': None,
+            'images': []}
+    try:
+        gallery.create()
+    except ConnectionError as e:
+        info['success'] = False
+        info['error'] = str(e)
+    else:
+        info['success'] = True
+        info['error'] = None
+        info['gallery_url'] = gallery.url
+        info['edit_url'] = gallery.edit_url
+        for sub in gallery.add(*filepaths):
+            info['images'].append(dict(sub))
+    import json
+    import sys
+    sys.stdout.write(json.dumps(info, indent=4) + '\n')
 
 
 def _get_cli_args():
@@ -39,6 +83,8 @@ def _get_cli_args():
                            help='Gallery title')
     argparser.add_argument('--comments', '-c', action='store_true',
                            help='Enable comments')
+    argparser.add_argument('--json', '-j', action='store_true',
+                           help='Print URLs as JSON object')
     argparser.add_argument('--version', '-V', action='version',
                            version=f'%(prog)s {pyimgbox.__version__}')
     argparser.add_argument('--debug', action='store_true',

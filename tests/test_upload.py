@@ -1,4 +1,3 @@
-import random
 from unittest.mock import Mock, call, mock_open, patch
 
 import pytest
@@ -7,7 +6,7 @@ from pyimgbox import _const, _upload
 
 
 def test_Submission_needs_success_key():
-    with pytest.raises(TypeError, match=r"required keyword-only argument: 'success'"):
+    with pytest.raises(TypeError, match=r"required keyword-only argument: 'success'$"):
         _upload.Submission(x='y')
 
 def test_Submission_gets_unknown_key():
@@ -63,68 +62,107 @@ def test_Submission_gets_valid_error_arguments():
           'error': 'Trouble is afoot!'}
 
 
-def test_Gallery_title_property():
-    assert _upload.Gallery(title='Foo, Bar, Baz').title == 'Foo, Bar, Baz'
-    assert _upload.Gallery(title=(1, 2, 3)).title == '(1, 2, 3)'
+def test_Gallery_property_title():
+    assert _upload.Gallery().title is None
+    g = _upload.Gallery(title='Foo, Bar, Baz')
+    assert g.title == 'Foo, Bar, Baz'
+    g.title = (1, 2, 3)
+    assert g.title == '(1, 2, 3)'
+    g.title = None
+    assert g.title is None
 
-def test_Gallery_comments_enabled_property():
-    assert _upload.Gallery(comments_enabled=True).comments_enabled is True
-    assert _upload.Gallery(comments_enabled=False).comments_enabled is False
-    assert _upload.Gallery(comments_enabled=0).comments_enabled is False
-    assert _upload.Gallery(comments_enabled='yes').comments_enabled is True
+def test_Gallery_properties_thumb_width_and_square_thumbs():
+    assert isinstance(_upload.Gallery().thumb_width, int)
+    assert isinstance(_upload.Gallery().square_thumbs, bool)
+    g = _upload.Gallery(thumb_width=200, square_thumbs=False)
+    assert g.thumb_width == 200
+    assert g.square_thumbs is False
+    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[200]
+    g.square_thumbs = True
+    assert g.thumb_width == 200
+    assert g.square_thumbs is True
+    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_SQUARE[200]
+    g.thumb_width = 321
+    assert g.thumb_width == 300
+    assert g.square_thumbs is True
+    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_SQUARE[300]
+    g.square_thumbs = 0
+    assert g.thumb_width == 300
+    assert g.square_thumbs is False
+    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[300]
+
+def test_Gallery_property_adult():
+    assert isinstance(_upload.Gallery().adult, bool)
+    g = _upload.Gallery(adult=True)
+    assert g.adult is True
+    g.adult = False
+    assert g.adult is False
+    g.adult = 1
+    assert g.adult is True
+
+def test_Gallery_property_comments_enabled():
+    assert isinstance(_upload.Gallery().comments_enabled, bool)
+    g = _upload.Gallery(comments_enabled=True)
+    assert g.comments_enabled is True
+    g.comments_enabled = False
+    assert g.comments_enabled is False
+    g.comments_enabled = 1
+    assert g.comments_enabled is True
+
 
 @patch('pyimgbox._utils.post_json')
 @patch('pyimgbox._utils.get')
-def test_Gallery_init_gets_invalid_html_from_landing_page(mock_get, mock_post_json):
+def test_Gallery_create_gets_invalid_html_from_landing_page(mock_get, mock_post_json):
     mock_get.return_value = '~~> This is not html. <-'
-    gallery = _upload.Gallery()
+    g = _upload.Gallery()
     with pytest.raises(RuntimeError, match=r"Couldn't find CSRF token in HTML head"):
-        gallery._init()
-    assert _const.CSRF_TOKEN_HEADER not in gallery._session.headers
-    assert gallery._token == {}
-    assert gallery._initialized is False
+        g.create()
+    assert _const.CSRF_TOKEN_HEADER not in g._session.headers
+    assert g._token == {}
+    assert g.created is False
 
 @patch('pyimgbox._utils.post_json')
 @patch('pyimgbox._utils.get')
-def test_Gallery_init_ensures_token_is_dictionary(mock_get, mock_post_json):
+def test_Gallery_create_ensures_token_is_dictionary(mock_get, mock_post_json):
     mock_get.return_value = ('<html><head>'
                              '<meta foo="bar" name="something" />'
                              '<meta content="THE-CSRF-TOKEN" name="csrf-token" />'
                              '<meta name="yo" />'
                              '</head></html>')
     mock_post_json.return_value = (1, 2, 3)
-    gallery = _upload.Gallery(title='The Title', comments_enabled=True)
+    g = _upload.Gallery()
     with pytest.raises(RuntimeError, match=r'^Not a dict: \(1, 2, 3\)$'):
-        gallery._init()
-    assert gallery._token == {}
-    assert gallery._initialized is False
+        g.create()
+    assert _const.CSRF_TOKEN_HEADER in g._session.headers
+    assert g._token == {}
+    assert g.created is False
 
 @patch('pyimgbox._utils.post_json')
 @patch('pyimgbox._utils.get')
-def test_Gallery_init_sets_session_header_and_token(mock_get, mock_post_json):
+def test_Gallery_create_sets_session_header_and_token(mock_get, mock_post_json):
     mock_get.return_value = ('<html><head>'
                              '<meta foo="bar" name="something" />'
                              '<meta content="THE-CSRF-TOKEN" name="csrf-token" />'
                              '<meta name="yo" />'
                              '</head></html>')
     mock_post_json.return_value = {'something': 'asdf', 'foo': 'bar'}
-
-    gallery = _upload.Gallery(title='The Title', comments_enabled=True)
-    assert gallery._initialized is False
-    assert gallery._init() is None
-
+    g = _upload.Gallery(title='The Title', comments_enabled=True)
+    assert g.created is False
+    assert g.create() is None
     assert mock_get.call_args_list == [
-        call(gallery._session, f'https://{_const.SERVICE_DOMAIN}/', timeout=30)]
+        call(g._session, f'https://{_const.SERVICE_DOMAIN}/', timeout=30)]
     assert mock_post_json.call_args_list == [
-        call(gallery._session, _const.TOKEN_URL, timeout=30,
+        call(g._session, _const.TOKEN_URL, timeout=30,
              data=[('gallery', 'true'),
                    ('gallery_title', 'The Title'),
                    ('comments_enabled', '1')])
     ]
+    assert g._session.headers[_const.CSRF_TOKEN_HEADER] == 'THE-CSRF-TOKEN'
+    assert g._token == {'something': 'asdf', 'foo': 'bar'}
+    assert g.created is True
 
-    assert gallery._session.headers[_const.CSRF_TOKEN_HEADER] == 'THE-CSRF-TOKEN'
-    assert gallery._token == {'something': 'asdf', 'foo': 'bar'}
-    assert gallery._initialized is True
+    with pytest.raises(RuntimeError, match=r'^Gallery was already created$'):
+        g.create()
 
 
 @patch('pyimgbox._utils.get', Mock())
@@ -321,141 +359,33 @@ def test_Gallery_submit_file_succeeds(mock_post_json):
 
 @patch('pyimgbox._utils.get', Mock())
 @patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_does_not_inititialize_without_filepaths():
-    gallery = _upload.Gallery()
-    mock_init = Mock()
+def test_Gallery_add_raises_RuntimeError_if_create_was_not_called_first():
+    g = _upload.Gallery()
     mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        assert mock_init.call_args_list == []
-        assert tuple(gallery.submit()) == ()
-        assert mock_init.call_args_list == []
+    with patch.multiple(g, _submit_file=mock_submit_file):
+        with pytest.raises(RuntimeError, match=r'^create\(\) must be called first$'):
+            tuple(g.add('foo.jpg'))
         assert mock_submit_file.call_args_list == []
 
 @patch('pyimgbox._utils.get', Mock())
 @patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_calls_inititializes_automatically_but_only_once():
-    filepaths = ('foo.jpg', 'bar.jpg')
-    gallery = _upload.Gallery()
-    mock_init = Mock()
+def test_Gallery_submit_yields_return_values_from_submit_file():
+    filepaths = ('path/to/foo.jpg', '/other/path/to/bar.jpg')
+    g = _upload.Gallery()
+    mock_create = Mock()
     mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        assert mock_init.call_args_list == []
-        for sub in gallery.submit(*filepaths):
-            assert mock_init.call_args_list == [call()]
-        assert mock_submit_file.call_args_list == [call('foo.jpg',
-                                                        _const.CONTENT_TYPES['family'],
-                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
-                                                        timeout=None),
-                                                   call('bar.jpg',
-                                                        _const.CONTENT_TYPES['family'],
-                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
-                                                        timeout=None)]
-
-@patch('pyimgbox._utils.get', Mock())
-@patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_catches_OSError_from_init():
-    filepaths = ('foo.jpg', 'bar.jpg')
-    gallery = _upload.Gallery()
-    mock_init = Mock(side_effect=ConnectionError('Argh'))
-    mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        for sub in gallery.submit(*filepaths):
-            assert sub == _upload.Submission(success=False, error='Argh')
-        assert mock_submit_file.call_args_list == []
-
-@patch('pyimgbox._utils.get', Mock())
-@patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_catches_ValueError_from_init():
-    filepaths = ('foo.jpg', 'bar.jpg')
-    gallery = _upload.Gallery()
-    mock_init = Mock(side_effect=ValueError('Argh'))
-    mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        for sub in gallery.submit(*filepaths):
-            assert sub == _upload.Submission(success=False, error='Argh')
-        assert mock_submit_file.call_args_list == []
-
-@patch('pyimgbox._utils.get', Mock())
-@patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_handles_nsfw_argument():
-    filepaths = ('path/to/foo.jpg',)
-    gallery = _upload.Gallery()
-    mock_init = Mock()
-    mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        for sub in gallery.submit(*filepaths, nsfw=False):
+    # Mock g.created to be True
+    g._token = {'token_id': '123', 'token_secret': '456',
+                'gallery_id': 'abc', 'gallery_secret': 'def'}
+    g._session.headers[_const.CSRF_TOKEN_HEADER] = 'something'
+    with patch.multiple(g, create=mock_create, _submit_file=mock_submit_file):
+        for sub in g.add(*filepaths, timeout=123):
             pass
         assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
                                                         _const.CONTENT_TYPES['family'],
                                                         _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
-                                                        timeout=None)]
-        mock_submit_file.reset_mock()
-        for sub in gallery.submit(*filepaths, nsfw=True):
-            pass
-        assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
-                                                        _const.CONTENT_TYPES['adult'],
-                                                        _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
-                                                        timeout=None)]
-
-@patch('pyimgbox._utils.get', Mock())
-@patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_handles_thumb_width_and_square_thumbs_arguments():
-    filepaths = ('path/to/foo.jpg',)
-    gallery = _upload.Gallery()
-    mock_init = Mock()
-    mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        for (width, code) in _const.THUMBNAIL_WIDTHS_SQUARE.items():
-            # Provide existing thumb_width
-            for sub in gallery.submit(*filepaths, thumb_width=width, square_thumbs=True):
-                pass
-            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
-                                                            _const.CONTENT_TYPES['family'],
-                                                            code,
-                                                            timeout=None)]
-            mock_submit_file.reset_mock()
-            # Provide any thumb_width and automatically pick closest existing
-            for sub in gallery.submit(*filepaths,
-                                      thumb_width=width + random.randint(-10, 10),
-                                      square_thumbs=True):
-                pass
-            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
-                                                            _const.CONTENT_TYPES['family'],
-                                                            code,
-                                                            timeout=None)]
-            mock_submit_file.reset_mock()
-
-        for (width, code) in _const.THUMBNAIL_WIDTHS_KEEP_ASPECT.items():
-            # Provide existing thumb_width
-            for sub in gallery.submit(*filepaths, thumb_width=width, square_thumbs=False):
-                pass
-            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
-                                                            _const.CONTENT_TYPES['family'],
-                                                            code,
-                                                            timeout=None)]
-            mock_submit_file.reset_mock()
-            # Provide any thumb_width and automatically pick closest existing
-            for sub in gallery.submit(*filepaths,
-                                      thumb_width=width + random.randint(-10, 10),
-                                      square_thumbs=False):
-                pass
-            assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
-                                                            _const.CONTENT_TYPES['family'],
-                                                            code,
-                                                            timeout=None)]
-            mock_submit_file.reset_mock()
-
-@patch('pyimgbox._utils.get', Mock())
-@patch('pyimgbox._utils.post_json', Mock())
-def test_Gallery_submit_handles_timeout_argument():
-    filepaths = ('path/to/foo.jpg',)
-    gallery = _upload.Gallery()
-    mock_init = Mock()
-    mock_submit_file = Mock()
-    with patch.multiple(gallery, _init=mock_init, _submit_file=mock_submit_file):
-        for sub in gallery.submit(*filepaths, timeout=999):
-            pass
-        assert mock_submit_file.call_args_list == [call('path/to/foo.jpg',
+                                                        timeout=123),
+                                                   call('/other/path/to/bar.jpg',
                                                         _const.CONTENT_TYPES['family'],
                                                         _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[100],
-                                                        timeout=999)]
+                                                        timeout=123)]
