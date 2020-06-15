@@ -35,4 +35,10 @@ Easy uploading to [imgbox.com](https://imgbox.com/).
         for submission in gallery.add(*files):
             pprint.pprint(submission)
     ```
+
+### Installation
+
+```sh
+$ sudo apt install pipx
+$ pipx install --upgrade pyimgbox
 ```
