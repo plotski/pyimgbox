@@ -1,5 +1,3 @@
-Easy uploading to [imgbox.com](https://imgbox.com/).
-
 - CLI tool
 
     ```sh
