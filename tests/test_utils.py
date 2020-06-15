@@ -43,7 +43,7 @@ def test_post_json_raises_ValueError():
     mock_session = Mock()
     mock_session.post.return_value.text = 'This is not JSON.'
     mock_session.post.return_value.json.side_effect = ValueError('Not JSON')
-    with pytest.raises(ValueError, match=r'^Not JSON: This is not JSON.$'):
+    with pytest.raises(RuntimeError, match=r'^Not JSON: This is not JSON.$'):
         _utils.post_json(mock_session, 'https://foo', bar='asdf')
     assert mock_session.post.call_args_list == [
         call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
