@@ -16,6 +16,8 @@ import contextlib
 
 def main():
     import pyimgbox
+    import sys
+    import traceback
     args = _get_cli_args()
 
     if args.debug:
@@ -28,11 +30,18 @@ def main():
                                thumb_width=args.thumb_width,
                                square_thumbs=args.square_thumbs,
                                comments_enabled=args.comments)
-    if args.json:
-        success = _json_output(gallery, args.files)
-    else:
-        success = _text_output(gallery, args.files)
-    import sys
+
+    try:
+        if args.json:
+            success = _json_output(gallery, args.files)
+        else:
+            success = _text_output(gallery, args.files)
+    except RuntimeError as e:
+        success = False
+        print(''.join(traceback.format_tb(e.__traceback__)), file=sys.stderr)
+        print('Please report this as a bug: '
+              'https://github.com/plotski/pyimgbox/issues',
+              file=sys.stderr)
     sys.exit(0 if success else 1)
 
 
