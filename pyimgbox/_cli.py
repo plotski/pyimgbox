@@ -57,7 +57,7 @@ def _text_output(gallery, filepaths):
         print(f'Gallery: {gallery.url}')
         print(f'   Edit: {gallery.edit_url}')
         for sub in gallery.add(*filepaths):
-            print(f'* {sub.filepath}')
+            print(f'* {sub.filename}')
             if sub.success:
                 print(f'      Image: {sub.image_url}')
                 print(f'  Thumbnail: {sub.thumbnail_url}')
