@@ -85,7 +85,7 @@ def _json_output(gallery, filepaths):
         info['gallery_url'] = gallery.url
         info['edit_url'] = gallery.edit_url
         for sub in gallery.add(*filepaths):
-            info['images'].append(dict(sub))
+            info['images'].append(sub)
     import json
     import sys
     sys.stdout.write(json.dumps(info, indent=4) + '\n')
