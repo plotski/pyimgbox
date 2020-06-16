@@ -11,6 +11,8 @@
 # You should have received a copy of the GNU General Public License along with this
 # program.  If not, see <https://www.gnu.org/licenses/>.
 
+import contextlib
+
 
 def main():
     import pyimgbox
@@ -27,16 +29,21 @@ def main():
                                square_thumbs=args.square_thumbs,
                                comments_enabled=args.comments)
     if args.json:
-        _json_output(gallery, args.files)
+        success = _json_output(gallery, args.files)
     else:
-        _text_output(gallery, args.files)
+        success = _text_output(gallery, args.files)
+    import sys
+    sys.exit(0 if success else 1)
 
 
 def _text_output(gallery, filepaths):
+    import sys
+    success = True
     try:
         gallery.create()
     except ConnectionError as e:
-        print(str(e))
+        success = False
+        print(str(e), file=sys.stderr)
     else:
         print(f'Gallery: {gallery.url}')
         print(f'   Edit: {gallery.edit_url}')
@@ -48,6 +55,8 @@ def _text_output(gallery, filepaths):
                 print(f'    Webpage: {sub.web_url}')
             else:
                 print(f'  {sub.error}')
+                success = False
+    return success
 
 
 def _json_output(gallery, filepaths):
@@ -71,6 +80,7 @@ def _json_output(gallery, filepaths):
     import json
     import sys
     sys.stdout.write(json.dumps(info, indent=4) + '\n')
+    return info['success']
 
 
 def _get_cli_args():
