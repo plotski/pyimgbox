@@ -12,7 +12,6 @@
 # program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
-import contextlib
 import sys
 import traceback
 
