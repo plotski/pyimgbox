@@ -46,6 +46,7 @@ def test_Submission_gets_valid_success_arguments():
         gallery_url='https://foo.bar/fdsa',
         edit_url='https://foo.bar/fdsa/edit'
     ) == {'success': True,
+          'error': None,
           'filename': 'Foo.jpg',
           'filepath': 'path/to/Foo.jpg',
           'image_url': 'https://foo.bar/asdf.jpg',
@@ -59,7 +60,14 @@ def test_Submission_gets_valid_error_arguments():
         success=False,
         error='Trouble is afoot!',
     ) == {'success': False,
-          'error': 'Trouble is afoot!'}
+          'error': 'Trouble is afoot!',
+          'filename': None,
+          'filepath': None,
+          'image_url': None,
+          'thumbnail_url': None,
+          'web_url': None,
+          'gallery_url': None,
+          'edit_url': None}
 
 
 def test_Gallery_property_title():
@@ -176,7 +184,12 @@ def test_Gallery_submit_file_cannot_open_file(mock_post_json):
     assert sub == {'success': False,
                    'error': 'No such file or directory',
                    'filename': 'exist.jpg',
-                   'filepath': 'this/file/does/not/exist.jpg'}
+                   'filepath': 'this/file/does/not/exist.jpg',
+                   'image_url': None,
+                   'thumbnail_url': None,
+                   'web_url': None,
+                   'gallery_url': None,
+                   'edit_url': None}
 
 @patch('pyimgbox._utils.get', Mock())
 @patch('builtins.open', mock_open(read_data='foo'))
@@ -192,7 +205,12 @@ def test_Gallery_submit_file_gets_file_with_unknown_mimetype(mock_post_json, moc
     assert sub == {'success': False,
                    'error': 'Unknown mime type',
                    'filename': 'file.jpg',
-                   'filepath': 'path/to/file.jpg'}
+                   'filepath': 'path/to/file.jpg',
+                   'image_url': None,
+                   'thumbnail_url': None,
+                   'web_url': None,
+                   'gallery_url': None,
+                   'edit_url': None}
 
 @patch('pyimgbox._utils.get', Mock())
 @patch('builtins.open', mock_open(read_data='foo'))
@@ -208,7 +226,12 @@ def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(mock_post_json,
     assert sub == {'success': False,
                    'error': 'Unsupported file type: text/plain',
                    'filename': 'file.txt',
-                   'filepath': 'path/to/file.txt'}
+                   'filepath': 'path/to/file.txt',
+                   'image_url': None,
+                   'thumbnail_url': None,
+                   'web_url': None,
+                   'gallery_url': None,
+                   'edit_url': None}
 
 @patch('pyimgbox._utils.get', Mock())
 @patch('builtins.open', mock_open(read_data='foo'))
@@ -226,7 +249,12 @@ def test_Gallery_submit_file_raises_OSError(mock_post_json):
     assert sub == {'success': False,
                    'error': 'Network is unreachable',
                    'filename': 'file.jpg',
-                   'filepath': 'path/to/file.jpg'}
+                   'filepath': 'path/to/file.jpg',
+                   'image_url': None,
+                   'thumbnail_url': None,
+                   'web_url': None,
+                   'gallery_url': None,
+                   'edit_url': None}
     assert mock_post_json.call_args_list == [
         call(
             gallery._session, _const.PROCESS_URL,
@@ -262,7 +290,12 @@ def test_Gallery_submit_file_raises_ValueError(mock_post_json):
     assert sub == {'success': False,
                    'error': 'Error while parsing JSON',
                    'filename': 'file.jpg',
-                   'filepath': 'path/to/file.jpg'}
+                   'filepath': 'path/to/file.jpg',
+                   'image_url': None,
+                   'thumbnail_url': None,
+                   'web_url': None,
+                   'gallery_url': None,
+                   'edit_url': None}
     assert mock_post_json.call_args_list == [
         call(
             gallery._session, _const.PROCESS_URL,

@@ -40,7 +40,7 @@ class Submission(dict):
     All keys are also available as attributes for convenience.
     """
 
-    def __new__(cls, *, success, **kwargs):
+    def __init__(self, *, success, **kwargs):
         values = {
             'success': bool(success),
             'error': None,
@@ -62,7 +62,7 @@ class Submission(dict):
                       'web_url', 'gallery_url', 'edit_url'):
                 assert k in kwargs, f'Missing key: {k!r}'
         values.update(kwargs)
-        return super().__new__(cls, values)
+        super().__init__(values)
 
     def __getattr__(self, name):
         value = self.get(name)
