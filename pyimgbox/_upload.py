@@ -287,8 +287,8 @@ class Gallery():
             image_url=info['original_url'],
             thumbnail_url=info['thumbnail_url'],
             web_url=info['url'],
-            gallery_url=_const.GALLERY_URL_FORMAT.format(**self._token),
-            edit_url=_const.EDIT_URL_FORMAT.format(**self._token),
+            gallery_url=self.url,
+            edit_url=self.edit_url,
         )
 
     def add(self, *filepaths, timeout=None):
