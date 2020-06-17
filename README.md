@@ -7,14 +7,14 @@
 - Shell script to generate BBCode
 
     ```sh
-    imgbox --json --thumb-width 350 "$@" > images.json
-    echo "[url=$(jq -r '.gallery_url' < images.json)]Gallery[/url]"
-    echo "[url=$(jq -r '.edit_url' < images.json)]Edit Gallery[/url]"
+    imgbox --json --thumb-width 350 "$@" > upload.json
+    echo "[url=$(jq -r '.gallery_url' < upload.json)]Gallery[/url]"
+    echo "[url=$(jq -r '.edit_url' < upload.json)]Edit Gallery[/url]"
     while read image; do
         image_url=$(jq -r '.image_url' <<< "$image")
         thumbnail_url=$(jq -r '.thumbnail_url' <<< "$image")
         echo "[url=$image_url][img]$thumbnail_url[/img][/url]"
-    done <<< $(jq -c '.images[]' images.json)
+    done <<< $(jq -c '.images[]' upload.json)
     ```
 
 - Python
@@ -30,6 +30,7 @@
         print('Oh no!', str(e))
     else:
         print('Gallery URL:', gallery.url)
+        print(    Edit URL:', gallery.edit_url)
         for submission in gallery.add(*files):
             pprint.pprint(submission)
     ```
