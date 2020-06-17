@@ -30,7 +30,7 @@
         print('Oh no!', str(e))
     else:
         print('Gallery URL:', gallery.url)
-        print(    Edit URL:', gallery.edit_url)
+        print('   Edit URL:', gallery.edit_url)
         for submission in gallery.add(*files):
             pprint.pprint(submission)
     ```
