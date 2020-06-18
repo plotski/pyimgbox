@@ -26,6 +26,13 @@ def run(argv):
         logging.basicConfig(level=logging.DEBUG,
                             format='%(module)s: %(message)s')
 
+    # Read files from arguments and from stdin
+    files = []
+    if not sys.stdin.isatty():
+        files.extend(f.rstrip('\n') for f in sys.stdin.readlines())
+    if args.files != ['-']:
+        files.extend(args.files)
+
     gallery = pyimgbox.Gallery(title=args.title,
                                adult=args.adult,
                                thumb_width=args.thumb_width,
@@ -34,9 +41,9 @@ def run(argv):
 
     try:
         if args.json:
-            exitcode = _json_output(gallery, args.files)
+            exitcode = _json_output(gallery, files)
         else:
-            exitcode = _text_output(gallery, args.files)
+            exitcode = _text_output(gallery, files)
     except RuntimeError as e:
         exitcode = 100
         print(''.join(traceback.format_tb(e.__traceback__)), file=sys.stderr)
@@ -97,8 +104,9 @@ def _json_output(gallery, filepaths):
 
 def _get_cli_args(argv):
     argparser = argparse.ArgumentParser(description='Upload images to imgbox.com')
-    argparser.add_argument('files', nargs='+',
-                           help='Image files to upload')
+    argparser.add_argument('files', nargs='*',
+                           help=('Image files to upload; newline-separated file paths '
+                                 'are also read from stdin'))
     argparser.add_argument('--title', '-t', default=None,
                            help='Gallery title')
     argparser.add_argument('--thumb-width', '-w', default=100, type=int,
