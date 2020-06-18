@@ -2,6 +2,8 @@
 
     ```sh
     $ imgbox foo.jpg bar.png --title "My Gallery" --thumb-width 500
+    $ imgbox --thumb-width 123 < list_of_file_paths.txt
+    $ generate_file_paths | imgbox --json | jq -r ".images[].image_url"
     ```
 
 - Shell script to generate BBCode
