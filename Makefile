@@ -11,5 +11,6 @@ clean:
 
 venv:
 	"$(PYTHON)" -m venv "$(VENV_PATH)"
+	"$(VENV_PATH)"/bin/pip install --upgrade setuptools wheel
 	"$(VENV_PATH)"/bin/pip install --upgrade pytest tox flake8 isort
 	"$(VENV_PATH)"/bin/pip install --editable .
