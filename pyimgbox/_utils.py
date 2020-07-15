@@ -23,7 +23,7 @@ def get(session, url, timeout=None, **kwargs):
     log.debug('GET: %s: %s', url, kwargs)
     try:
         return session.get(url, timeout=timeout or _const.DEFAULT_TIMEOUT, **kwargs).text
-    except requests.ConnectionError:
+    except requests.exceptions.RequestException:
         raise ConnectionError(f'Failed to connect to {_const.SERVICE_DOMAIN}')
 
 
@@ -31,7 +31,7 @@ def post_json(session, url, timeout=None, **kwargs):
     log.debug('POST: %s: %s', url, kwargs)
     try:
         response = session.post(url, timeout=timeout or _const.DEFAULT_TIMEOUT, **kwargs)
-    except requests.ConnectionError:
+    except requests.exceptions.RequestException:
         raise ConnectionError(f'Failed to connect to {_const.SERVICE_DOMAIN}')
     else:
         log.debug('Response text for %s: %r', url, response.text)

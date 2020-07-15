@@ -22,6 +22,23 @@ def test_get_raises_ConnectionError():
     assert mock_session.get.call_args_list == [
         call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
 
+def test_get_raises_HTTPError():
+    mock_session = Mock()
+    mock_session.get.side_effect = requests.HTTPError('Oops')
+    with pytest.raises(ConnectionError, match=fr'^Failed to connect to {_const.SERVICE_DOMAIN}$'):
+        _utils.get(mock_session, 'https://foo', bar='asdf')
+    assert mock_session.get.call_args_list == [
+        call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
+
+def test_get_raises_Timeout():
+    for exc in (requests.ReadTimeout, requests.ConnectTimeout):
+        mock_session = Mock()
+        mock_session.get.side_effect = exc()
+        with pytest.raises(ConnectionError, match=fr'^Failed to connect to {_const.SERVICE_DOMAIN}$'):
+            _utils.get(mock_session, 'https://foo', bar='asdf')
+        assert mock_session.get.call_args_list == [
+            call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
+
 
 def test_post_json_succeeds():
     mock_session = Mock()
@@ -38,6 +55,23 @@ def test_post_json_raises_ConnectionError():
         _utils.post_json(mock_session, 'https://foo', bar='asdf')
     assert mock_session.post.call_args_list == [
         call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
+
+def test_post_json_raises_HTTPError():
+    mock_session = Mock()
+    mock_session.post.side_effect = requests.HTTPError('Nay')
+    with pytest.raises(ConnectionError, match=fr'^Failed to connect to {_const.SERVICE_DOMAIN}$'):
+        _utils.post_json(mock_session, 'https://foo', bar='asdf')
+    assert mock_session.post.call_args_list == [
+        call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
+
+def test_post_json_raises_Timeout():
+    for exc in (requests.ReadTimeout, requests.ConnectTimeout):
+        mock_session = Mock()
+        mock_session.post.side_effect = exc('Nope')
+        with pytest.raises(ConnectionError, match=fr'^Failed to connect to {_const.SERVICE_DOMAIN}$'):
+            _utils.post_json(mock_session, 'https://foo', bar='asdf')
+        assert mock_session.post.call_args_list == [
+            call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
 
 def test_post_json_raises_ValueError():
     mock_session = Mock()
