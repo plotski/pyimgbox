@@ -1,3 +1,7 @@
+2020-07-15 0.3.1
+  * Catch timeouts and other exceptions from HTTP requests
+
+
 2020-06-18 0.3.0
   * Read newline-separated file paths from stdin
 
