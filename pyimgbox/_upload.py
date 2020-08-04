@@ -194,6 +194,9 @@ class Gallery():
         """
         Create gallery remotely
 
+        Properties like :attr:`title` cannot be changed after calling
+        :meth:`create`.
+
         Raise ConnectionError if the creation request fails.
 
         Raise RuntimeError if this method is called twice or if the server
