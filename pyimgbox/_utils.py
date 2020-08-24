@@ -22,10 +22,13 @@ def post_json(session, url, timeout=None, **kwargs):
         raise ConnectionError(f'Failed to connect to {_const.SERVICE_DOMAIN}')
     else:
         log.debug('Response text for %s: %r', url, response.text)
-        try:
-            return response.json()
-        except ValueError as e:
-            raise ValueError(f'{e}: {response.text}')
+        if response.status_code == 413:
+            raise ConnectionError('File is too large')
+        else:
+            try:
+                return response.json()
+            except ValueError as e:
+                raise ValueError(f'{e}: {response.text}')
 
 
 def find_closest_number(n, ns):

@@ -82,6 +82,15 @@ def test_post_json_raises_ValueError():
     assert mock_session.post.call_args_list == [
         call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
 
+def test_post_json_captures_413_Payload_Too_Large():
+    mock_session = Mock()
+    mock_session.post.return_value.text = '413 Request Entity Too Large'
+    mock_session.post.return_value.status_code = 413
+    with pytest.raises(ConnectionError, match=r'^File is too large$'):
+        _utils.post_json(mock_session, 'https://foo', bar='asdf')
+    assert mock_session.post.call_args_list == [
+        call('https://foo', timeout=_const.DEFAULT_TIMEOUT, bar='asdf')]
+
 
 def test_find_closest_number():
     numbers = (10, 20, 30)
