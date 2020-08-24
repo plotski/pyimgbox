@@ -16,6 +16,7 @@ import os
 import sys
 import traceback
 from os.path import exists as _path_exists
+from os.path import getsize as _path_filesize
 
 import pyimgbox
 
@@ -76,6 +77,8 @@ def _get_files(args):
             raise ValueError(f'File does not exist: {f}')
         if not _path_readable(f):
             raise ValueError(f'File is not readable: {f}')
+        if _path_filesize(f) >= pyimgbox.MAX_FILE_SIZE:
+            raise ValueError(f'File is larger than {pyimgbox.MAX_FILE_SIZE} B: {f}')
 
     return files
 

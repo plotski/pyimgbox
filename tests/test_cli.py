@@ -3,7 +3,7 @@ import json
 import sys
 from unittest.mock import Mock, call, patch
 
-from pyimgbox import _cli
+from pyimgbox import MAX_FILE_SIZE, _cli
 
 
 class MockSubmission(dict):
@@ -51,10 +51,13 @@ def test_run_prints_help_text_without_arguments(mock_text_output, mock_Gallery):
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.return_value = True
+    mock_readable.return_value = True
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
     mock_text_output.return_value = 0
     files = ('The Foo.jpg', 'The Bar.jpg', 'The Fugly.png')
     with MockIO(stdin='\n'.join(files)):
@@ -70,10 +73,13 @@ def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery, mock_readabl
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.return_value = True
+    mock_readable.return_value = True
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
     mock_text_output.return_value = 0
     files = ('a.jpg', '', 'b.jpg', ' ', 'c.png', '   ')
     with MockIO(stdin='\n'.join(files)):
@@ -88,10 +94,13 @@ def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery,
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_complains_about_nonexisting_files_early(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+def test_run_complains_about_nonexisting_files_early(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.side_effect = (True, False, True)
+    mock_readable.return_value = True
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
     mock_text_output.return_value = 0
     with MockIO() as cap:
         assert _cli.run(['foo.jpg', 'bar.jpg', 'baz.jpg']) == 1
@@ -102,11 +111,13 @@ def test_run_complains_about_nonexisting_files_early(mock_text_output, mock_Gall
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_complains_about_nonreadable_files_early(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+def test_run_complains_about_nonreadable_files_early(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.return_value = True
     mock_readable.side_effect = (True, False, True)
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
     mock_text_output.return_value = 0
     with MockIO() as cap:
         assert _cli.run(['foo.jpg', 'bar.jpg', 'baz.jpg']) == 1
@@ -117,10 +128,30 @@ def test_run_complains_about_nonreadable_files_early(mock_text_output, mock_Gall
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+def test_run_complains_about_too_large_files_early(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.return_value = True
+    mock_readable.return_value = True
+    mock_filesize.side_effect = (MAX_FILE_SIZE - 1, MAX_FILE_SIZE + 1, MAX_FILE_SIZE - 1)
+    mock_text_output.return_value = 0
+    with MockIO() as cap:
+        assert _cli.run(['foo.jpg', 'bar.jpg', 'baz.jpg']) == 1
+    assert cap.stdout == ''
+    assert cap.stderr == f'File is larger than {MAX_FILE_SIZE} B: bar.jpg\n'
+    assert mock_Gallery.call_args_list == []
+    assert mock_text_output.call_args_list == []
+
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
+@patch('pyimgbox.Gallery')
+@patch('pyimgbox._cli._text_output')
+def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
+    mock_exists.return_value = True
+    mock_readable.return_value = True
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
     mock_text_output.return_value = 0
     assert _cli.run(['foo.jpg', 'bar.jpg', '--title', 'Foo and Bar',
                      '--adult', '--comments',
@@ -136,10 +167,13 @@ def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery, mock_re
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_handles_RuntimeError_from_text_output(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+def test_run_handles_RuntimeError_from_text_output(mock_text_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.return_value = True
+    mock_readable.return_value = True
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
     mock_text_output.side_effect = RuntimeError('Argh')
     with MockIO() as cap:
         assert _cli.run(['foo.jpg']) == 100
@@ -150,11 +184,14 @@ def test_run_handles_RuntimeError_from_text_output(mock_text_output, mock_Galler
 
 @patch('pyimgbox._cli._path_exists')
 @patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox._cli._path_filesize')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._json_output')
-def test_run_handles_RuntimeError_from_json_output(mock_json_output, mock_Gallery, mock_readable, mock_exists):
-    mock_json_output.side_effect = RuntimeError('Argh')
+def test_run_handles_RuntimeError_from_json_output(mock_json_output, mock_Gallery, mock_filesize, mock_readable, mock_exists):
     mock_exists.return_value = True
+    mock_readable.return_value = True
+    mock_filesize.return_value = MAX_FILE_SIZE - 1
+    mock_json_output.side_effect = RuntimeError('Argh')
     with MockIO() as cap:
         assert _cli.run(['--json', 'foo.jpg']) == 100
     assert mock_json_output.call_args_list == [call(mock_Gallery(), ['foo.jpg'])]
