@@ -49,9 +49,12 @@ def test_run_prints_help_text_without_arguments(mock_text_output, mock_Gallery):
     assert mock_Gallery.call_args_list == []
     assert mock_text_output.call_args_list == []
 
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery):
+def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+    mock_exists.return_value = True
     mock_text_output.return_value = 0
     files = ('The Foo.jpg', 'The Bar.jpg', 'The Fugly.png')
     with MockIO(stdin='\n'.join(files)):
@@ -65,9 +68,12 @@ def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery):
         call(mock_Gallery(), ['The Foo.jpg', 'The Bar.jpg', 'The Fugly.png']),
     ]
 
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery):
+def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+    mock_exists.return_value = True
     mock_text_output.return_value = 0
     files = ('a.jpg', '', 'b.jpg', ' ', 'c.png', '   ')
     with MockIO(stdin='\n'.join(files)):
@@ -80,9 +86,41 @@ def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery)
         call(mock_Gallery(), ['a.jpg', 'b.jpg', 'c.png']),
     ]
 
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery):
+def test_run_complains_about_nonexisting_files_early(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+    mock_exists.side_effect = (True, False, True)
+    mock_text_output.return_value = 0
+    with MockIO() as cap:
+        assert _cli.run(['foo.jpg', 'bar.jpg', 'baz.jpg']) == 1
+    assert cap.stdout == ''
+    assert cap.stderr == 'File does not exist: bar.jpg\n'
+    assert mock_Gallery.call_args_list == []
+    assert mock_text_output.call_args_list == []
+
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox.Gallery')
+@patch('pyimgbox._cli._text_output')
+def test_run_complains_about_nonreadable_files_early(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+    mock_exists.return_value = True
+    mock_readable.side_effect = (True, False, True)
+    mock_text_output.return_value = 0
+    with MockIO() as cap:
+        assert _cli.run(['foo.jpg', 'bar.jpg', 'baz.jpg']) == 1
+    assert cap.stdout == ''
+    assert cap.stderr == 'File is not readable: bar.jpg\n'
+    assert mock_Gallery.call_args_list == []
+    assert mock_text_output.call_args_list == []
+
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
+@patch('pyimgbox.Gallery')
+@patch('pyimgbox._cli._text_output')
+def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+    mock_exists.return_value = True
     mock_text_output.return_value = 0
     assert _cli.run(['foo.jpg', 'bar.jpg', '--title', 'Foo and Bar',
                      '--adult', '--comments',
@@ -96,9 +134,12 @@ def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery):
         call(mock_Gallery(), ['foo.jpg', 'bar.jpg']),
     ]
 
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
-def test_run_handles_RuntimeError_from_text_output(mock_text_output, mock_Gallery):
+def test_run_handles_RuntimeError_from_text_output(mock_text_output, mock_Gallery, mock_readable, mock_exists):
+    mock_exists.return_value = True
     mock_text_output.side_effect = RuntimeError('Argh')
     with MockIO() as cap:
         assert _cli.run(['foo.jpg']) == 100
@@ -107,11 +148,13 @@ def test_run_handles_RuntimeError_from_text_output(mock_text_output, mock_Galler
     assert cap.stderr.endswith('Please report this as a bug: '
                                'https://github.com/plotski/pyimgbox/issues\n')
 
-
+@patch('pyimgbox._cli._path_exists')
+@patch('pyimgbox._cli._path_readable')
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._json_output')
-def test_run_handles_RuntimeError_from_json_output(mock_json_output, mock_Gallery):
+def test_run_handles_RuntimeError_from_json_output(mock_json_output, mock_Gallery, mock_readable, mock_exists):
     mock_json_output.side_effect = RuntimeError('Argh')
+    mock_exists.return_value = True
     with MockIO() as cap:
         assert _cli.run(['--json', 'foo.jpg']) == 100
     assert mock_json_output.call_args_list == [call(mock_Gallery(), ['foo.jpg'])]

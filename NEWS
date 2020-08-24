@@ -3,6 +3,8 @@
     empty gallery.
   * When reading image file paths from stdin, ignore empty strings and strings
     that contains whitespace only.
+  * Report error before creating a new gallery if image file doesn't exist or is
+    not readable.
 
 
 2020-07-15 0.3.1

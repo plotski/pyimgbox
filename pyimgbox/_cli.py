@@ -12,10 +12,16 @@
 # program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import os
 import sys
 import traceback
+from os.path import exists as _path_exists
 
 import pyimgbox
+
+
+def _path_readable(path):
+    return os.access(path, os.R_OK)
 
 
 def run(argv):
@@ -26,17 +32,10 @@ def run(argv):
         logging.basicConfig(level=logging.DEBUG,
                             format='%(module)s: %(message)s')
 
-    # Read files from arguments and from stdin
-    files = []
-    if not sys.stdin.isatty():
-        files.extend(f.rstrip('\n') for f in sys.stdin.readlines() if f.strip())
-    if args.files != ['-']:
-        files.extend(args.files)
-
-    if not files:
-        print('Missing at least one image file. '
-              f'Run "{pyimgbox.__command_name__} -h" for more information.',
-              file=sys.stderr)
+    try:
+        files = _get_files(args)
+    except ValueError as e:
+        print(e, file=sys.stderr)
         exitcode = 1
     else:
         gallery = pyimgbox.Gallery(title=args.title,
@@ -58,6 +57,27 @@ def run(argv):
                   file=sys.stderr)
 
     return exitcode
+
+
+def _get_files(args):
+    # Read files from arguments and from stdin
+    files = []
+    if not sys.stdin.isatty():
+        files.extend(f.rstrip('\n') for f in sys.stdin.readlines() if f.strip())
+    if args.files != ['-']:
+        files.extend(args.files)
+
+    if not files:
+        raise ValueError('Missing at least one image file. '
+                         f'Run "{pyimgbox.__command_name__} -h" for more information.')
+
+    for f in files:
+        if not _path_exists(f):
+            raise ValueError(f'File does not exist: {f}')
+        if not _path_readable(f):
+            raise ValueError(f'File is not readable: {f}')
+
+    return files
 
 
 def _text_output(gallery, filepaths):
