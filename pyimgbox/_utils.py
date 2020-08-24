@@ -25,7 +25,7 @@ def post_json(session, url, timeout=None, **kwargs):
         try:
             return response.json()
         except ValueError as e:
-            raise RuntimeError(f'{e}: {response.text}')
+            raise ValueError(f'{e}: {response.text}')
 
 
 def find_closest_number(n, ns):
