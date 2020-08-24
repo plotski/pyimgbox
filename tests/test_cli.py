@@ -40,6 +40,14 @@ class MockIO():
 
 
 @patch('pyimgbox.Gallery')
+def test_run_prints_help_text_without_arguments(mock_Gallery):
+    with MockIO() as cap:
+        assert _cli.run([]) == 1
+        assert cap.stdout == ''
+        assert cap.stderr == 'Missing at least one image file. Run "imgbox -h" for more information.\n'
+    assert mock_Gallery.call_args_list == []
+
+@patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
 def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery):
     mock_text_output.return_value = 0

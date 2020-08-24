@@ -1,3 +1,8 @@
+2020-??-?? 0.3.2
+  * Print error message if no CLI arguments are given instead of creating an
+    empty gallery.
+
+
 2020-07-15 0.3.1
   * Catch timeouts and other exceptions from HTTP requests
 

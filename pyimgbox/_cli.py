@@ -33,23 +33,30 @@ def run(argv):
     if args.files != ['-']:
         files.extend(args.files)
 
-    gallery = pyimgbox.Gallery(title=args.title,
-                               adult=args.adult,
-                               thumb_width=args.thumb_width,
-                               square_thumbs=args.square_thumbs,
-                               comments_enabled=args.comments)
-
-    try:
-        if args.json:
-            exitcode = _json_output(gallery, files)
-        else:
-            exitcode = _text_output(gallery, files)
-    except RuntimeError as e:
-        exitcode = 100
-        print(''.join(traceback.format_tb(e.__traceback__)), file=sys.stderr)
-        print('Please report this as a bug: '
-              'https://github.com/plotski/pyimgbox/issues',
+    if not files:
+        print('Missing at least one image file. '
+              f'Run "{pyimgbox.__command_name__} -h" for more information.',
               file=sys.stderr)
+        exitcode = 1
+    else:
+        gallery = pyimgbox.Gallery(title=args.title,
+                                   adult=args.adult,
+                                   thumb_width=args.thumb_width,
+                                   square_thumbs=args.square_thumbs,
+                                   comments_enabled=args.comments)
+
+        try:
+            if args.json:
+                exitcode = _json_output(gallery, files)
+            else:
+                exitcode = _text_output(gallery, files)
+        except Exception as e:
+            exitcode = 100
+            print(''.join(traceback.format_exception(type(e), e, e.__traceback__)), file=sys.stderr)
+            print('Please report this as a bug: '
+                  'https://github.com/plotski/pyimgbox/issues',
+                  file=sys.stderr)
+
     return exitcode
 
 
