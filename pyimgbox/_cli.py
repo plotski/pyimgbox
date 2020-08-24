@@ -29,7 +29,7 @@ def run(argv):
     # Read files from arguments and from stdin
     files = []
     if not sys.stdin.isatty():
-        files.extend(f.rstrip('\n') for f in sys.stdin.readlines())
+        files.extend(f.rstrip('\n') for f in sys.stdin.readlines() if f.strip())
     if args.files != ['-']:
         files.extend(args.files)
 

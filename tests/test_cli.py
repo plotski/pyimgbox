@@ -67,6 +67,21 @@ def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery):
 
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
+def test_run_ignores_empty_file_names_from_stdin(mock_text_output, mock_Gallery):
+    mock_text_output.return_value = 0
+    files = ('a.jpg', '', 'b.jpg', ' ', 'c.png', '   ')
+    with MockIO(stdin='\n'.join(files)):
+        assert _cli.run([]) == 0
+    assert mock_Gallery.call_args_list == [
+        call(title=None, adult=False, comments_enabled=False,
+             square_thumbs=False, thumb_width=100)
+    ]
+    assert mock_text_output.call_args_list == [
+        call(mock_Gallery(), ['a.jpg', 'b.jpg', 'c.png']),
+    ]
+
+@patch('pyimgbox.Gallery')
+@patch('pyimgbox._cli._text_output')
 def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery):
     mock_text_output.return_value = 0
     assert _cli.run(['foo.jpg', 'bar.jpg', '--title', 'Foo and Bar',
