@@ -40,12 +40,14 @@ class MockIO():
 
 
 @patch('pyimgbox.Gallery')
-def test_run_prints_help_text_without_arguments(mock_Gallery):
+@patch('pyimgbox._cli._text_output')
+def test_run_prints_help_text_without_arguments(mock_text_output, mock_Gallery):
     with MockIO() as cap:
         assert _cli.run([]) == 1
         assert cap.stdout == ''
         assert cap.stderr == 'Missing at least one image file. Run "imgbox -h" for more information.\n'
     assert mock_Gallery.call_args_list == []
+    assert mock_text_output.call_args_list == []
 
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
@@ -59,6 +61,9 @@ def test_run_reads_files_from_stdin(mock_text_output, mock_Gallery):
              adult=False, comments_enabled=False,
              square_thumbs=False, thumb_width=100)
     ]
+    assert mock_text_output.call_args_list == [
+        call(mock_Gallery(), ['The Foo.jpg', 'The Bar.jpg', 'The Fugly.png']),
+    ]
 
 @patch('pyimgbox.Gallery')
 @patch('pyimgbox._cli._text_output')
@@ -71,6 +76,9 @@ def test_run_passes_arguments_to_Gallery(mock_text_output, mock_Gallery):
         call(title='Foo and Bar',
              adult=True, comments_enabled=True,
              square_thumbs=True, thumb_width=500)
+    ]
+    assert mock_text_output.call_args_list == [
+        call(mock_Gallery(), ['foo.jpg', 'bar.jpg']),
     ]
 
 @patch('pyimgbox.Gallery')
