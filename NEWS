@@ -2,7 +2,7 @@
   * Print error message if no CLI arguments are given instead of creating an
     empty gallery.
   * When reading image file paths from stdin, ignore empty strings and strings
-    that contains whitespace only.
+    that contain whitespace only.
   * Report error before creating a new gallery if image file doesn't exist or if
     it is not readable or too large.
   * For unexpected exceptions, actually print the exception, not only the
