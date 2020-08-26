@@ -1,4 +1,4 @@
-2020-??-?? 0.3.2
+2020-08-26 0.3.2
   * Print error message if no CLI arguments are given instead of creating an
     empty gallery.
   * When reading image file paths from stdin, ignore empty strings and strings
