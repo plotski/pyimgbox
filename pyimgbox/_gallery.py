@@ -179,7 +179,10 @@ class Gallery():
             self._gallery_token = gallery_token
             log.debug('Gallery token:\n%s', self._gallery_token)
 
-    async def _submit_file(self, filepath, content_type, thumbnail_size):
+    async def _submit_file(self, filepath):
+        if not self.created:
+            raise RuntimeError('create() must be called first')
+
         submission = {'filename': os.path.basename(filepath),
                       'filepath': filepath}
 
@@ -201,8 +204,8 @@ class Gallery():
         data = {
             'token_id': str(self._gallery_token['token_id']),
             'token_secret': str(self._gallery_token['token_secret']),
-            'content_type': str(content_type),
-            'thumbnail_size': str(thumbnail_size),
+            'content_type': str(self._content_type),
+            'thumbnail_size': str(self._thumbnail_width),
             'gallery_id': str(self._gallery_token.get('gallery_id', 'null')),
             'gallery_secret': str(self._gallery_token.get('gallery_secret', 'null')),
             'comments_enabled': '1' if self.comments_enabled else '0',
@@ -226,7 +229,7 @@ class Gallery():
         except ConnectionError as e:
             return Submission(success=False, error=str(e), **submission)
 
-        log.debug('POST response:\n%s', response)
+        log.debug('POST response: %s', response)
         if 'files' not in response:
             raise RuntimeError(f"Unexpected response: Couldn't find 'files': {response}")
         elif not isinstance(response['files'], list):
@@ -246,21 +249,31 @@ class Gallery():
             edit_url=self.edit_url,
         )
 
+    async def upload(self, filepath):
+        """
+        Upload image to this gallery, return Submission object
+
+        filepath: Path to JPEG or PNG file
+
+        Raise RuntimeError if create() was not called first
+        """
+        return await self._submit_file(filepath)
+
     async def add(self, *filepaths):
         """
         Upload images to this gallery, yield Submission objects
 
-        filepaths: Iterable of image file paths
+        This is typically used in an `async for` loop:
+
+        >>> async for submission in gallery.add("foo.jpg", "bar.jpg"):
+        >>>     print(submission)
+
+        filepaths: Iterable of paths to JPEG or PNG files
 
         Raise RuntimeError if create() was not called first
         """
-        if not self.created:
-            raise RuntimeError('create() must be called first')
         for filepath in filepaths:
-            submission = await self._submit_file(filepath,
-                                                 self._content_type,
-                                                 self._thumbnail_width)
-            yield submission
+            yield await self._submit_file(filepath)
 
     def __repr__(self):
         return (f'{type(self).__name__}('
