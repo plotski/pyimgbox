@@ -23,21 +23,18 @@ class HTTPClient:
         await self._client.aclose()
 
     async def get(self, url, params={}, json=False):
-        response = await self._catch_errors(
+        return await self._catch_errors(
             request=self._client.build_request(
                 method='GET',
                 url=url,
                 headers=self._headers,
                 params=params,
             ),
+            json=json,
         )
-        if json:
-            return response.json()
-        else:
-            return response.text
 
     async def post(self, url, data={}, files={}, json=False):
-        response = await self._catch_errors(
+        return await self._catch_errors(
             request=self._client.build_request(
                 method='POST',
                 url=url,
@@ -45,13 +42,10 @@ class HTTPClient:
                 data=data,
                 files=files,
             ),
+            json=json,
         )
-        if json:
-            return response.json()
-        else:
-            return response.text
 
-    async def _catch_errors(self, request):
+    async def _catch_errors(self, request, json=False):
         log.debug('Sending %r', request)
 
         # Don't send User-Agent
@@ -90,4 +84,10 @@ class HTTPClient:
             raise ConnectionError(f'{request.url}: {e}')
 
         else:
-            return response
+            if json:
+                try:
+                    return response.json()
+                except ValueError as e:
+                    raise ConnectionError(f'{request.url}: Invalid JSON: {e}: {response.text}')
+            else:
+                return response.text

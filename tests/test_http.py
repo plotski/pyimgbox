@@ -63,6 +63,18 @@ async def test_get_cannot_connect(client):
     with pytest.raises(ConnectionError, match=f'^{url}: Connection failed$'):
         await client.get(url)
 
+@pytest.mark.asyncio
+async def test_get_cannot_parse_json(client, httpserver):
+    httpserver.expect_request(
+        uri='/foo',
+        method='GET',
+    ).respond_with_data('{this is not json]')
+    url = httpserver.url_for('/foo')
+    json_error = re.escape('Expecting property name enclosed in double quotes: line 1 column 2 (char 1): '
+                           '{this is not json]')
+    with pytest.raises(ConnectionError, match=f'^{url}: Invalid JSON: {json_error}'):
+        await client.get(url, json=True)
+
 
 @pytest.mark.asyncio
 async def test_post_sends_headers(client, httpserver):
@@ -151,3 +163,15 @@ async def test_post_cannot_connect(client):
     url = 'http://localhost:12345/foo/bar'
     with pytest.raises(ConnectionError, match=f'^{url}: Connection failed$'):
         await client.post(url)
+
+@pytest.mark.asyncio
+async def test_post_cannot_parse_json(client, httpserver):
+    httpserver.expect_request(
+        uri='/foo',
+        method='POST',
+    ).respond_with_data('{this is not json]')
+    url = httpserver.url_for('/foo')
+    json_error = re.escape('Expecting property name enclosed in double quotes: line 1 column 2 (char 1): '
+                           '{this is not json]')
+    with pytest.raises(ConnectionError, match=f'^{url}: Invalid JSON: {json_error}'):
+        await client.post(url, json=True)
