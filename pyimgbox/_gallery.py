@@ -168,15 +168,15 @@ class Gallery():
             'comments_enabled': '1' if self.comments_enabled else '0',
         }
 
-        self._gallery_token = await self._client.post(
+        gallery_token = await self._client.post(
             url=_const.TOKEN_URL,
             data=data,
             json=True,
         )
-
-        if not isinstance(self._gallery_token, dict):
-            raise RuntimeError(f'Not a dict: {self._gallery_token!r}')
+        if not isinstance(gallery_token, dict):
+            raise RuntimeError(f'Not a dict: {gallery_token!r}')
         else:
+            self._gallery_token = gallery_token
             log.debug('Gallery token:\n%s', self._gallery_token)
 
     async def _submit_file(self, filepath, content_type, thumbnail_size):
