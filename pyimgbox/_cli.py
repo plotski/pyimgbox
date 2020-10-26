@@ -159,7 +159,7 @@ def _get_cli_args(argv):
     argparser.add_argument('--json', '-j', action='store_true',
                            help='Print URLs as JSON object')
     argparser.add_argument('--version', '-V', action='version',
-                           version=f'%(prog)s {pyimgbox.__version__}')
+                           version=f'{pyimgbox.__command_name__} {pyimgbox.__version__}')
     argparser.add_argument('--debug', action='store_true',
                            help='Print debugging information')
     args = argparser.parse_args(argv)
