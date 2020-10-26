@@ -30,6 +30,6 @@ THUMBNAIL_WIDTHS_KEEP_ASPECT = {
 }
 
 CONTENT_TYPES = {
-    'family': 1,
-    'adult': 2,
+    'family': '1',
+    'adult': '2',
 }
