@@ -4,9 +4,8 @@ import os
 import pprint
 
 import bs4
-import requests
 
-from . import _const, _utils
+from . import _const, _http, _utils
 
 log = logging.getLogger('pyimgbox')
 
@@ -79,13 +78,19 @@ class Gallery():
 
     def __init__(self, title=None, thumb_width=100, square_thumbs=False,
                  adult=False, comments_enabled=False):
-        self._session = requests.Session()
-        self._token = {}
+        self._client = _http.HTTPClient()
+        self._gallery_token = {}
         self.title = title
         self.square_thumbs = square_thumbs
         self.thumb_width = thumb_width
         self.adult = adult
         self.comments_enabled = comments_enabled
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._client.close()
 
     @property
     def title(self):
@@ -159,25 +164,28 @@ class Gallery():
     @property
     def url(self):
         """URL to gallery of thumbnails or None if create() was not called yet"""
-        if self._token:
-            return _const.GALLERY_URL_FORMAT.format(**self._token)
+        if self._gallery_token:
+            return _const.GALLERY_URL_FORMAT.format(**self._gallery_token)
         else:
             return None
 
     @property
     def edit_url(self):
         """URL to manage gallery or None if create() was not called yet"""
-        if self._token:
-            return _const.EDIT_URL_FORMAT.format(**self._token)
+        if self._gallery_token:
+            return _const.EDIT_URL_FORMAT.format(**self._gallery_token)
         else:
             return None
 
     @property
     def created(self):
         """Whether this gallery was created remotely"""
-        return bool(_const.CSRF_TOKEN_HEADER in self._session.headers and self._token)
+        return bool(
+            self._gallery_token and
+            _const.CSRF_TOKEN_HEADER in self._client.headers,
+        )
 
-    def create(self):
+    async def create(self):
         """
         Create gallery remotely
 
@@ -192,35 +200,39 @@ class Gallery():
         if self.created:
             raise RuntimeError('Gallery was already created')
 
-        # Get CSRF token
-        csrf_token = None
-        text = _utils.get(self._session, f'https://{_const.SERVICE_DOMAIN}/', timeout=30)
-        soup = bs4.BeautifulSoup(text, features="html.parser")
-        log.debug(soup.prettify())
+        # Get CSRF token from entry page
+        self._client.headers.pop(_const.CSRF_TOKEN_HEADER, None)
+        text = await self._client.get(f'https://{_const.SERVICE_DOMAIN}/')
+
         # Find <meta content="..." name="csrf-token" />
+        soup = bs4.BeautifulSoup(text, features="html.parser")
         for meta in soup.find_all('meta', {'name': 'csrf-token'}):
             csrf_token = meta.get('content')
             log.debug('Found CSRF token: %s', csrf_token)
         if not csrf_token:
             raise RuntimeError("Couldn't find CSRF token in HTML head")
         else:
-            self._session.headers.update({_const.CSRF_TOKEN_HEADER: csrf_token})
+            self._client.headers[_const.CSRF_TOKEN_HEADER] = csrf_token
 
         # Get token_id / token_secret + gallery_id / gallery_secret
-        data = [
-            ('gallery', 'true'),
-            ('gallery_title', self._title or ''),
-            ('comments_enabled', '1' if self._comments_enabled else '0'),
-        ]
-        token = _utils.post_json(self._session, _const.TOKEN_URL, data=data, timeout=30)
-        if not isinstance(token, dict):
-            raise RuntimeError(f'Not a dict: {token!r}')
-        else:
-            log.debug('Session request headers:\n%s', pprint.pformat(self._session.headers))
-            self._token = token
-            log.debug('Gallery token:\n%s', pprint.pformat(self._token))
+        data = {
+            'gallery': 'true',
+            'gallery_title': self._title or '',
+            'comments_enabled': '1' if self._comments_enabled else '0',
+        }
 
-    def _submit_file(self, filepath, content_type, thumbnail_size, timeout):
+        self._gallery_token = await self._client.post(
+            url=_const.TOKEN_URL,
+            data=data,
+            json=True,
+        )
+
+        if not isinstance(self._gallery_token, dict):
+            raise RuntimeError(f'Not a dict: {self._gallery_token!r}')
+        else:
+            log.debug('Gallery token:\n%s', pprint.pformat(self._gallery_token))
+
+    async def _submit_file(self, filepath, content_type, thumbnail_size):
         submission = {'filename': os.path.basename(filepath),
                       'filepath': filepath}
 
@@ -239,37 +251,43 @@ class Gallery():
                               error=f'Unsupported file type: {mimetype}',
                               **submission)
 
-        data = [
-            ('token_id', self._token['token_id']),
-            ('token_secret', self._token['token_secret']),
-            ('content_type', content_type),
-            ('thumbnail_size', thumbnail_size),
-            ('gallery_id', self._token.get('gallery_id', 'null')),
-            ('gallery_secret', self._token.get('gallery_secret', 'null')),
-            ('comments_enabled', '1' if self._comments_enabled else '0'),
-        ]
-        files = [('files[]', (os.path.basename(filepath),
-                              fileobj,
-                              mimetype))]
+        data = {
+            'token_id': str(self._gallery_token['token_id']),
+            'token_secret': str(self._gallery_token['token_secret']),
+            'content_type': str(content_type),
+            'thumbnail_size': str(thumbnail_size),
+            'gallery_id': str(self._gallery_token.get('gallery_id', 'null')),
+            'gallery_secret': str(self._gallery_token.get('gallery_secret', 'null')),
+            'comments_enabled': '1' if self._comments_enabled else '0',
+        }
+
+        files = {
+            'files[]': (
+                os.path.basename(filepath),
+                fileobj,
+                mimetype,
+            ),
+        }
+
         try:
-            json = _utils.post_json(self._session, _const.PROCESS_URL,
-                                    data=data, files=files, timeout=timeout)
-        except OSError as e:
-            # Raised when connection fails or fileobj.read() fails
-            return Submission(success=False, error=str(e), **submission)
-        except ValueError as e:
-            # Raised when remote side returns non-JSON
+            response = await self._client.post(
+                url=_const.PROCESS_URL,
+                data=data,
+                files=files,
+                json=True,
+            )
+        except ConnectionError as e:
             return Submission(success=False, error=str(e), **submission)
 
-        log.debug('POST response:\n%s', pprint.pformat(json))
-        if 'files' not in json:
-            raise RuntimeError(f"Unexpected response: Couldn't find 'files': {json}")
-        elif not isinstance(json['files'], list):
-            raise RuntimeError(f"Unexpected response: 'files' is not a list: {json}")
-        elif not json['files']:
-            raise RuntimeError(f"Unexpected response: 'files' is empty: {json}")
+        log.debug('POST response:\n%s', pprint.pformat(response))
+        if 'files' not in response:
+            raise RuntimeError(f"Unexpected response: Couldn't find 'files': {response}")
+        elif not isinstance(response['files'], list):
+            raise RuntimeError(f"Unexpected response: 'files' is not a list: {response}")
+        elif not response['files']:
+            raise RuntimeError(f"Unexpected response: 'files' is empty: {response}")
 
-        info = json['files'][0]
+        info = response['files'][0]
         return Submission(
             success=True,
             filename=os.path.basename(filepath),
@@ -281,22 +299,21 @@ class Gallery():
             edit_url=self.edit_url,
         )
 
-    def add(self, *filepaths, timeout=None):
+    async def add(self, *filepaths):
         """
         Upload images to this gallery, yield Submission objects
 
         filepaths: Iterable of image file paths
-        timeout: Number of seconds of no server response before giving up
 
         Raise RuntimeError if create() was not called first
         """
         if not self.created:
             raise RuntimeError('create() must be called first')
         for filepath in filepaths:
-            yield self._submit_file(filepath,
-                                    self._content_type,
-                                    self._thumbnail_width,
-                                    timeout=timeout)
+            submission = await self._submit_file(filepath,
+                                                 self._content_type,
+                                                 self._thumbnail_width)
+            yield submission
 
     def __repr__(self):
         return (f'{type(self).__name__}('
