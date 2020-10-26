@@ -152,6 +152,7 @@ class Gallery():
 
         # Find <meta content="..." name="csrf-token" />
         soup = bs4.BeautifulSoup(text, features="html.parser")
+        csrf_token = ''
         for meta in soup.find_all('meta', {'name': 'csrf-token'}):
             csrf_token = meta.get('content')
             log.debug('Found CSRF token: %s', csrf_token)
