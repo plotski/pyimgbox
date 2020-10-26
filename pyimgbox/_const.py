@@ -1,7 +1,7 @@
 MAX_FILE_SIZE = 10485760  # 10 MiB (10290152 bytes were allowed on 2020-09-24)
-DEFAULT_TIMEOUT = 180  # 3 minutes
 CSRF_TOKEN_HEADER = 'X-CSRF-Token'
 ALLOWED_MIMETYPES = ('image/jpeg', 'image/png')
+
 SERVICE_DOMAIN = 'imgbox.com'
 TOKEN_URL = f'https://{SERVICE_DOMAIN}/ajax/token/generate'
 PROCESS_URL = f'https://{SERVICE_DOMAIN}/upload/process'

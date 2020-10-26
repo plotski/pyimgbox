@@ -34,7 +34,6 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'requests',
         'httpx==0.16.*',
         'beautifulsoup4',
     ],
