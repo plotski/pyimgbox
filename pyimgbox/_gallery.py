@@ -1,7 +1,6 @@
 import logging
 import mimetypes
 import os
-import pprint
 
 import bs4
 
@@ -177,7 +176,7 @@ class Gallery():
         if not isinstance(self._gallery_token, dict):
             raise RuntimeError(f'Not a dict: {self._gallery_token!r}')
         else:
-            log.debug('Gallery token:\n%s', pprint.pformat(self._gallery_token))
+            log.debug('Gallery token:\n%s', self._gallery_token)
 
     async def _submit_file(self, filepath, content_type, thumbnail_size):
         submission = {'filename': os.path.basename(filepath),
@@ -226,7 +225,7 @@ class Gallery():
         except ConnectionError as e:
             return Submission(success=False, error=str(e), **submission)
 
-        log.debug('POST response:\n%s', pprint.pformat(response))
+        log.debug('POST response:\n%s', response)
         if 'files' not in response:
             raise RuntimeError(f"Unexpected response: Couldn't find 'files': {response}")
         elif not isinstance(response['files'], list):
