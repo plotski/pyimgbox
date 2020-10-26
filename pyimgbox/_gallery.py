@@ -164,8 +164,8 @@ class Gallery():
         # Get token_id / token_secret + gallery_id / gallery_secret
         data = {
             'gallery': 'true',
-            'gallery_title': self._title or '',
-            'comments_enabled': '1' if self._comments_enabled else '0',
+            'gallery_title': self.title or '',
+            'comments_enabled': '1' if self.comments_enabled else '0',
         }
 
         self._gallery_token = await self._client.post(
@@ -205,7 +205,7 @@ class Gallery():
             'thumbnail_size': str(thumbnail_size),
             'gallery_id': str(self._gallery_token.get('gallery_id', 'null')),
             'gallery_secret': str(self._gallery_token.get('gallery_secret', 'null')),
-            'comments_enabled': '1' if self._comments_enabled else '0',
+            'comments_enabled': '1' if self.comments_enabled else '0',
         }
 
         files = {
@@ -268,4 +268,4 @@ class Gallery():
                 f'thumb_width={repr(self.thumb_width)}, '
                 f'square_thumbs={repr(self.square_thumbs)}, '
                 f'adult={repr(self.adult)}, '
-                f'comments_enabled={repr(self._comments_enabled)})')
+                f'comments_enabled={repr(self.comments_enabled)})')
