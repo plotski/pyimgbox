@@ -38,5 +38,5 @@ setuptools.setup(
         'httpx==0.16.*',
         'beautifulsoup4',
     ],
-    entry_points={'console_scripts': ['imgbox = pyimgbox.__main__:main']},
+    entry_points={'console_scripts': ['imgbox = pyimgbox._cli:main']},
 )

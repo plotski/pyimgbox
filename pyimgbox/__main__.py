@@ -1,5 +1,5 @@
-def main():
-    import sys
+import sys
 
-    from . import _cli
-    sys.exit(_cli.run(sys.argv[1:]))
+from . import _cli
+
+sys.exit(_cli.main())

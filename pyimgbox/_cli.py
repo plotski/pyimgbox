@@ -12,6 +12,7 @@
 # program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import asyncio
 import os
 import sys
 import traceback
@@ -21,11 +22,15 @@ from os.path import getsize as _path_filesize
 import pyimgbox
 
 
-def _path_readable(path):
-    return os.access(path, os.R_OK)
+def main(argv=sys.argv[1:]):
+    loop = asyncio.get_event_loop()
+    exit_code = loop.run_until_complete(
+        run(argv)
+    )
+    return exit_code
 
 
-def run(argv):
+async def run(argv):
     args = _get_cli_args(argv)
 
     if args.debug:
@@ -33,31 +38,35 @@ def run(argv):
         logging.basicConfig(level=logging.DEBUG,
                             format='%(module)s: %(message)s')
 
+    exit_code = 0
     try:
         files = _get_files(args)
     except ValueError as e:
         print(e, file=sys.stderr)
-        exitcode = 1
+        exit_code = 1
     else:
-        gallery = pyimgbox.Gallery(title=args.title,
-                                   adult=args.adult,
-                                   thumb_width=args.thumb_width,
-                                   square_thumbs=args.square_thumbs,
-                                   comments_enabled=args.comments)
+        async with pyimgbox.Gallery(title=args.title,
+                                    adult=args.adult,
+                                    thumb_width=args.thumb_width,
+                                    square_thumbs=args.square_thumbs,
+                                    comments_enabled=args.comments) as gallery:
+            try:
+                if args.json:
+                    exit_code = await _json_output(gallery, files)
+                else:
+                    exit_code = await _text_output(gallery, files)
+            except Exception as e:
+                exit_code = 100
+                print(''.join(traceback.format_exception(type(e), e, e.__traceback__)), file=sys.stderr)
+                print('Please report this as a bug: '
+                      'https://github.com/plotski/pyimgbox/issues',
+                      file=sys.stderr)
 
-        try:
-            if args.json:
-                exitcode = _json_output(gallery, files)
-            else:
-                exitcode = _text_output(gallery, files)
-        except Exception as e:
-            exitcode = 100
-            print(''.join(traceback.format_exception(type(e), e, e.__traceback__)), file=sys.stderr)
-            print('Please report this as a bug: '
-                  'https://github.com/plotski/pyimgbox/issues',
-                  file=sys.stderr)
+    return exit_code
 
-    return exitcode
+
+def _path_readable(path):
+    return os.access(path, os.R_OK)
 
 
 def _get_files(args):
@@ -83,17 +92,17 @@ def _get_files(args):
     return files
 
 
-def _text_output(gallery, filepaths):
-    exitcode = 0
+async def _text_output(gallery, filepaths):
+    exit_code = 0
     try:
-        gallery.create()
+        await gallery.create()
     except ConnectionError as e:
-        exitcode = 1
+        exit_code = 1
         print(str(e), file=sys.stderr)
     else:
         print(f'Gallery: {gallery.url}')
         print(f'   Edit: {gallery.edit_url}')
-        for sub in gallery.add(*filepaths):
+        async for sub in gallery.add(*filepaths):
             print(f'* {sub.filename}')
             if sub.success:
                 print(f'      Image: {sub.image_url}')
@@ -101,21 +110,21 @@ def _text_output(gallery, filepaths):
                 print(f'    Webpage: {sub.web_url}')
             else:
                 print(f'  {sub.error}')
-                exitcode = 2
-    return exitcode
+                exit_code = 2
+    return exit_code
 
 
-def _json_output(gallery, filepaths):
-    exitcode = 0
+async def _json_output(gallery, filepaths):
+    exit_code = 0
     info = {'success': None,
             'error': None,
             'gallery_url': None,
             'edit_url': None,
             'images': []}
     try:
-        gallery.create()
+        await gallery.create()
     except ConnectionError as e:
-        exitcode = 1
+        exit_code = 1
         info['success'] = False
         info['error'] = str(e)
     else:
@@ -123,13 +132,13 @@ def _json_output(gallery, filepaths):
         info['error'] = None
         info['gallery_url'] = gallery.url
         info['edit_url'] = gallery.edit_url
-        for sub in gallery.add(*filepaths):
+        async for sub in gallery.add(*filepaths):
             info['images'].append(sub)
             if not sub.success:
-                exitcode = 2
+                exit_code = 2
     import json
     sys.stdout.write(json.dumps(info, indent=4) + '\n')
-    return exitcode
+    return exit_code
 
 
 def _get_cli_args(argv):
