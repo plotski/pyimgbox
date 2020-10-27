@@ -14,10 +14,31 @@ class Gallery():
     """
     Upload images to a gallery on imgbox.com
 
+    Asynchronous context manager usage:
+
+    >>> try:
+    >>>     async with pyimgbox.Gallery(title="Hello, World!") as gallery:
+    >>>         await gallery.create()
+    >>>         await gallery.upload('foo.jpg')
+    >>>         await gallery.upload('bar.png')
+    >>> except ConnectionError as e:
+    >>>     print("This is bad:", str(e))
+
+    Alternatively, you can use it like a normal object and call the close() method.
+
+    >>> try:
+    >>>     gallery = pyimgbox.Gallery(title="Hello, World!")
+    >>>     await gallery.create()
+    >>>     await gallery.upload('foo.jpg')
+    >>>     await gallery.upload('bar.png')
+    >>>     await gallery.close()
+    >>> except ConnectionError as e:
+    >>>     print("This is bad:", str(e))
+
     title: Name of the Gallery
     adult: True if any images are adult content, False otherwise
-    thumb_width: Thumbnail width in pixels; will automoatically snap to
-                 nearest supported value
+    thumb_width: Thumbnail width in pixels; automatically snaps to closest
+                 supported value
     square_thumbs: True to make thumbnails square, False otherwise
     comments_enabled: Whether comments are enabled for this gallery
     """
