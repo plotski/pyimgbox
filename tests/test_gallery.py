@@ -163,6 +163,25 @@ async def test_Gallery_submit_file_cannot_open_file(client):
     }
 
 @pytest.mark.asyncio
+async def test_Gallery_submit_file_gets_directory(client, tmp_path):
+    g = Gallery()
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
+    g._gallery_token = {'token_id': '123', 'token_secret': '456',
+                        'gallery_id': 'abc', 'gallery_secret': 'def'}
+    s = await g._submit_file(tmp_path)
+    assert s == {
+        'success': False,
+        'error': 'Is a directory',
+        'filename': os.path.basename(tmp_path),
+        'filepath': tmp_path,
+        'image_url': None,
+        'thumbnail_url': None,
+        'web_url': None,
+        'gallery_url': None,
+        'edit_url': None,
+    }
+
+@pytest.mark.asyncio
 async def test_Gallery_submit_file_gets_too_large_file(client, tmp_path):
     filepath = tmp_path / 'foo.png'
     # Create sparse file
