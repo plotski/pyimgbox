@@ -1,3 +1,9 @@
+2020-10-?? 1.0.0
+  * Move CLI tool into a separate project: https://github.com/plotski/imgbox-cli
+  * Make everything asynchronous.
+  * New Gallery.upload() method uploads a single image.
+
+
 2020-08-26 0.3.2
   * Print error message if no CLI arguments are given instead of creating an
     empty gallery.
