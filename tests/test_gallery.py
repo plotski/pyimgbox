@@ -1,3 +1,4 @@
+import os
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -162,9 +163,34 @@ async def test_Gallery_submit_file_cannot_open_file(client):
     }
 
 @pytest.mark.asyncio
+async def test_Gallery_submit_file_gets_too_large_file(client, tmp_path):
+    filepath = tmp_path / 'foo.png'
+    # Create sparse file
+    f = open(filepath, 'wb')
+    f.truncate(_const.MAX_FILE_SIZE + 1)
+    f.close()
+    g = Gallery()
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
+    g._gallery_token = {'token_id': '123', 'token_secret': '456',
+                        'gallery_id': 'abc', 'gallery_secret': 'def'}
+    s = await g._submit_file(filepath)
+    assert s == {
+        'success': False,
+        'error': f'File is larger than {_const.MAX_FILE_SIZE} bytes',
+        'filename': 'foo.png',
+        'filepath': filepath,
+        'image_url': None,
+        'thumbnail_url': None,
+        'web_url': None,
+        'gallery_url': None,
+        'edit_url': None,
+    }
+
+@pytest.mark.asyncio
 async def test_Gallery_submit_file_gets_file_with_unknown_mimetype(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=(None, None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',
@@ -186,6 +212,7 @@ async def test_Gallery_submit_file_gets_file_with_unknown_mimetype(client, mocke
 async def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=('text/plain', None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',
@@ -207,6 +234,7 @@ async def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(client, m
 async def test_Gallery_submit_file_catches_ConnectionError_from_client(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',
@@ -247,6 +275,7 @@ async def test_Gallery_submit_file_catches_ConnectionError_from_client(client, m
 async def test_Gallery_submit_file_gets_json_response_without_files_field(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',
@@ -260,6 +289,7 @@ async def test_Gallery_submit_file_gets_json_response_without_files_field(client
 async def test_Gallery_submit_file_gets_json_response_with_nonlist_files_field(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',
@@ -273,6 +303,7 @@ async def test_Gallery_submit_file_gets_json_response_with_nonlist_files_field(c
 async def test_Gallery_submit_file_gets_json_response_with_files_field(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',
@@ -286,6 +317,7 @@ async def test_Gallery_submit_file_gets_json_response_with_files_field(client, m
 async def test_Gallery_submit_file_succeeds(client, mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
     mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
+    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
     g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
     g._gallery_token = {'token_id': '123', 'token_secret': '456',

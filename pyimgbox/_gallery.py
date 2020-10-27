@@ -216,15 +216,26 @@ class Gallery():
         except OSError as e:
             return Submission(success=False, error=e.strerror, **submission)
 
+        if os.path.getsize(filepath) > _const.MAX_FILE_SIZE:
+            return Submission(
+                success=False,
+                error=f'File is larger than {_const.MAX_FILE_SIZE} bytes',
+                **submission,
+            )
+
         mimetype = mimetypes.guess_type(filepath)[0]
         if not mimetype:
-            return Submission(success=False,
-                              error='Unknown mime type',
-                              **submission)
+            return Submission(
+                success=False,
+                error='Unknown mime type',
+                **submission,
+            )
         if mimetype not in _const.ALLOWED_MIMETYPES:
-            return Submission(success=False,
-                              error=f'Unsupported file type: {mimetype}',
-                              **submission)
+            return Submission(
+                success=False,
+                error=f'Unsupported file type: {mimetype}',
+                **submission,
+            )
 
         data = {
             'token_id': str(self._gallery_token['token_id']),
