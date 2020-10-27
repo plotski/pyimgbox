@@ -36,6 +36,10 @@ class Gallery():
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        await self.close()
+
+    async def close(self):
+        """Stop adding images to this gallery"""
         await self._client.close()
 
     @property
