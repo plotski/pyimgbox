@@ -1,4 +1,4 @@
-__version__ = '0.3.2'
+__version__ = '1.0.0'
 __author__ = 'plotski'
 __author_email__ = 'plotski@example.org'
 __command_name__ = 'imgbox'
