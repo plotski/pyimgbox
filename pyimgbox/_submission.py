@@ -50,11 +50,10 @@ class Submission(dict):
         super().__init__(values)
 
     def __getattr__(self, name):
-        value = self.get(name)
-        if value is None:
+        try:
+            return self[name]
+        except KeyError:
             raise AttributeError(name)
-        else:
-            return value
 
     def __repr__(self):
         kwargs = ', '.join(f'{k}={v!r}'

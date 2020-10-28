@@ -56,3 +56,13 @@ def test_Submission_gets_valid_success_arguments():
         'gallery_url': 'https://foo.bar/fdsa',
         'edit_url': 'https://foo.bar/fdsa/edit',
     }
+
+def test_Submission_getattr_key_with_None_value():
+    s = Submission(error='Argh')
+    assert s.filename is None
+    assert s.filepath is None
+    assert s.image_url is None
+    assert s.thumbnail_url is None
+    assert s.web_url is None
+    assert s.gallery_url is None
+    assert s.edit_url is None
