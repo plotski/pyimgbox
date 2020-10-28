@@ -81,6 +81,6 @@ class HTTPClient:
                 try:
                     return response.json()
                 except ValueError as e:
-                    raise ConnectionError(f'{request.url}: Invalid JSON: {e}: {response.text}')
+                    raise RuntimeError(f'{request.url}: Invalid JSON: {e}: {response.text}')
             else:
                 return response.text

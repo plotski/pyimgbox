@@ -72,7 +72,7 @@ async def test_get_cannot_parse_json(client, httpserver):
     url = httpserver.url_for('/foo')
     json_error = re.escape('Expecting property name enclosed in double quotes: line 1 column 2 (char 1): '
                            '{this is not json]')
-    with pytest.raises(ConnectionError, match=f'^{url}: Invalid JSON: {json_error}'):
+    with pytest.raises(RuntimeError, match=f'^{url}: Invalid JSON: {json_error}'):
         await client.get(url, json=True)
 
 
@@ -173,5 +173,5 @@ async def test_post_cannot_parse_json(client, httpserver):
     url = httpserver.url_for('/foo')
     json_error = re.escape('Expecting property name enclosed in double quotes: line 1 column 2 (char 1): '
                            '{this is not json]')
-    with pytest.raises(ConnectionError, match=f'^{url}: Invalid JSON: {json_error}'):
+    with pytest.raises(RuntimeError, match=f'^{url}: Invalid JSON: {json_error}'):
         await client.post(url, json=True)
