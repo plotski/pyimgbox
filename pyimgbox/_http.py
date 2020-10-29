@@ -6,7 +6,7 @@ log = logging.getLogger('pyimgbox')
 
 class HTTPClient:
     def __init__(self):
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(timeout=300)
         self._headers = {}
 
     @property
