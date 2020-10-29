@@ -2,7 +2,7 @@ Python 3.6+ library for uploading images to [https://imgbox.com/](imgbox.com).
 
 ### Installation
 
-[pyimgbox is on PyPI](https://pypi.org/project/pyimgbox/).
+pyimgbox is on [PyPI](https://pypi.org/project/pyimgbox/).
 
 ```sh
 $ pip install pyimgbox
