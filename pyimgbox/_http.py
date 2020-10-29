@@ -64,12 +64,6 @@ class HTTPClient:
                     print(repr(response.text))
                     raise ConnectionError(f'{request.url}: {response.text}')
 
-        except httpx.InvalidURL:
-            raise ConnectionError(f'{request.url}: Invalid URL')
-
-        except httpx.TimeoutException:
-            raise ConnectionError(f'{request.url}: Timeout')
-
         except httpx.NetworkError:
             raise ConnectionError(f'{request.url}: Connection failed')
 

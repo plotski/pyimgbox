@@ -58,6 +58,12 @@ async def test_get_gets_http_error_status(client, httpserver):
         await client.get(url)
 
 @pytest.mark.asyncio
+async def test_get_gets_invalid_url(client):
+    url = 'foo:-1'
+    with pytest.raises(ConnectionError, match=f"^{url}: Unsupported URL protocol 'foo'$"):
+        await client.get(url)
+
+@pytest.mark.asyncio
 async def test_get_cannot_connect(client):
     url = 'http://localhost:12345/foo/bar'
     with pytest.raises(ConnectionError, match=f'^{url}: Connection failed$'):
