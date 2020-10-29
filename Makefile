@@ -7,9 +7,10 @@ clean:
 	rm -rf dist build
 	rm -rf .pytest_cache
 	rm -rf .tox
+	rm -rf "$(VENV_PATH)"
 	rm -rf .coverage
 	rm -rf .coverage.*
-	rm -rf "$(VENV_PATH)"
+	rm -rf htmlcov
 
 venv:
 	"$(PYTHON)" -m venv "$(VENV_PATH)"
