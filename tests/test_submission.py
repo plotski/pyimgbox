@@ -83,3 +83,26 @@ def test_Submission_getattr_unknown_key():
     )
     with pytest.raises(AttributeError, match=r"^Submission object has no attribute 'foo'$"):
         s.foo
+
+
+def test_Submission_repr():
+    s = Submission(
+        filepath='path/to/Foo.jpg',
+        image_url='https://foo.bar/asdf.jpg',
+        thumbnail_url='https://foo.bar/asdf_t.jpg',
+        web_url='https://foo.bar/asdf',
+        gallery_url='https://foo.bar/fdsa',
+        edit_url='https://foo.bar/fdsa/edit'
+    )
+    assert repr(s) == (
+        "Submission("
+        "success=True, "
+        "filepath='path/to/Foo.jpg', "
+        "filename='Foo.jpg', "
+        "image_url='https://foo.bar/asdf.jpg', "
+        "thumbnail_url='https://foo.bar/asdf_t.jpg', "
+        "web_url='https://foo.bar/asdf', "
+        "gallery_url='https://foo.bar/fdsa', "
+        "edit_url='https://foo.bar/fdsa/edit'"
+        ")"
+    )
