@@ -1,5 +1,7 @@
 Python 3.6+ library for uploading images to [https://imgbox.com/](imgbox.com).
 
+The CLI tool was moved to [imgbox-cli](https://github.com/plotski/imgbox-cli).
+
 ### Installation
 
 pyimgbox is on [PyPI](https://pypi.org/project/pyimgbox/).
