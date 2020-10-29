@@ -53,7 +53,7 @@ class Submission(dict):
         try:
             return self[name]
         except KeyError:
-            raise AttributeError(name)
+            raise AttributeError(f'{type(self).__name__} object has no attribute {name!r}')
 
     def __repr__(self):
         kwargs = ', '.join(f'{k}={v!r}'
