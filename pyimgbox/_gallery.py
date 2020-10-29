@@ -14,27 +14,6 @@ class Gallery():
     """
     Upload images to a gallery on imgbox.com
 
-    Asynchronous context manager usage:
-
-    >>> try:
-    >>>     async with pyimgbox.Gallery(title="Hello, World!") as gallery:
-    >>>         await gallery.create()
-    >>>         await gallery.upload('foo.jpg')
-    >>>         await gallery.upload('bar.png')
-    >>> except ConnectionError as e:
-    >>>     print("This is bad:", str(e))
-
-    Alternatively, you can use it like a normal object and call the close() method.
-
-    >>> try:
-    >>>     gallery = pyimgbox.Gallery(title="Hello, World!")
-    >>>     await gallery.create()
-    >>>     await gallery.upload('foo.jpg')
-    >>>     await gallery.upload('bar.png')
-    >>>     await gallery.close()
-    >>> except ConnectionError as e:
-    >>>     print("This is bad:", str(e))
-
     title: Name of the Gallery
     adult: True if any images are adult content, False otherwise
     thumb_width: Thumbnail width in pixels; automatically snaps to closest
@@ -89,7 +68,7 @@ class Gallery():
         if not isinstance(value, (int, float)):
             raise ValueError(f'Not a number: {value!r}')
         self._thumb_width = _utils.find_closest_number(int(value), self._thumb_widths)
-        self._thumbnail_width = self._thumb_widths[self._thumb_width]
+        self._thumbnail_size = self._thumb_widths[self._thumb_width]
 
     @property
     def square_thumbs(self):
@@ -100,10 +79,10 @@ class Gallery():
     def square_thumbs(self, value):
         if value:
             self._square_thumbs = True
-            self._thumb_widths = _const.THUMBNAIL_WIDTHS_SQUARE
+            self._thumb_widths = _const.THUMBNAIL_SIZES_SQUARE
         else:
             self._square_thumbs = False
-            self._thumb_widths = _const.THUMBNAIL_WIDTHS_KEEP_ASPECT
+            self._thumb_widths = _const.THUMBNAIL_SIZES_KEEP_ASPECT
         self.thumb_width = self.thumb_width
 
     @property
@@ -134,7 +113,7 @@ class Gallery():
 
     @property
     def url(self):
-        """URL to gallery of thumbnails or None if create() was not called yet"""
+        """URL to gallery of thumbnails or None before create() was called"""
         if self._gallery_token:
             return _const.GALLERY_URL_FORMAT.format(**self._gallery_token)
         else:
@@ -142,7 +121,7 @@ class Gallery():
 
     @property
     def edit_url(self):
-        """URL to manage gallery or None if create() was not called yet"""
+        """URL to manage gallery or None before create() was called"""
         if self._gallery_token:
             return _const.EDIT_URL_FORMAT.format(**self._gallery_token)
         else:
@@ -160,8 +139,8 @@ class Gallery():
         """
         Create gallery remotely
 
-        Properties like :attr:`title` cannot be changed after calling
-        :meth:`create`.
+        Some properties cannot be changed after calling this method. Other
+        properties are only available after this method was called.
 
         Raise ConnectionError if the creation request fails.
 
@@ -202,59 +181,80 @@ class Gallery():
             raise RuntimeError(f'Not a dict: {gallery_token!r}')
         else:
             self._gallery_token = gallery_token
-            log.debug('Gallery token:\n%s', self._gallery_token)
+            log.debug('Gallery token: %s', self._gallery_token)
 
-    async def _submit_file(self, filepath):
+    def _prepare(self, *filepaths):
+        """
+        Return list of 3-tuples:
+            (filepath,
+             3-tuple: (filepath, fileobject, error) or None,
+             error message or None)
+        """
+        files = []
+        for filepath in filepaths:
+            # Open file or get error message
+            try:
+                fileobj = open(filepath, 'rb')
+            except OSError as e:
+                files.append((filepath, None, e.strerror))
+            else:
+                # Check mime type
+                mimetype = mimetypes.guess_type(filepath)[0]
+                if not mimetype:
+                    files.append((filepath, None, 'Unknown file type'))
+                elif mimetype not in _const.ALLOWED_MIMETYPES:
+                    files.append((filepath, None, f'Unsupported file type: {mimetype}'))
+
+                # Check file size limit
+                elif os.path.getsize(filepath) > _const.MAX_FILE_SIZE:
+                    files.append((
+                        filepath,
+                        None,
+                        f'File is larger than {_const.MAX_FILE_SIZE} bytes'
+                    ))
+
+                # Store the tuple we need for the POST request
+                else:
+                    filetuple = (os.path.basename(filepath), fileobj, mimetype)
+                    files.append((filepath, filetuple, None))
+
+        return files
+
+    async def _upload_image(self, filepath, filetuple, error):
+        """
+        Upload image file
+
+        filepath: Path to image file
+        filetuple: (file name, file object, MIME type)
+        error: Error message or None
+
+        Return Submission object.
+        """
+        # Report error before creating the gallery
+        if error:
+            assert filetuple is None, 'Arguments "filetuple" and "error" are mutually exclusive'
+            return Submission(filepath=filepath, error=error)
+
+        # Auto-create gallery
         if not self.created:
-            raise RuntimeError('create() must be called first')
+            try:
+                await self.create()
+            except ConnectionError as e:
+                return Submission(filepath=filepath, error=str(e))
 
-        submission = {'filename': os.path.basename(filepath),
-                      'filepath': filepath}
-
-        try:
-            fileobj = open(filepath, 'rb')
-        except OSError as e:
-            return Submission(success=False, error=e.strerror, **submission)
-
-        if os.path.getsize(filepath) > _const.MAX_FILE_SIZE:
-            return Submission(
-                success=False,
-                error=f'File is larger than {_const.MAX_FILE_SIZE} bytes',
-                **submission,
-            )
-
-        mimetype = mimetypes.guess_type(filepath)[0]
-        if not mimetype:
-            return Submission(
-                success=False,
-                error='Unknown mime type',
-                **submission,
-            )
-        if mimetype not in _const.ALLOWED_MIMETYPES:
-            return Submission(
-                success=False,
-                error=f'Unsupported file type: {mimetype}',
-                **submission,
-            )
-
+        # Build request
         data = {
             'token_id': str(self._gallery_token['token_id']),
             'token_secret': str(self._gallery_token['token_secret']),
-            'content_type': str(self._content_type),
-            'thumbnail_size': str(self._thumbnail_width),
             'gallery_id': str(self._gallery_token.get('gallery_id', 'null')),
             'gallery_secret': str(self._gallery_token.get('gallery_secret', 'null')),
+            'content_type': str(self._content_type),
+            'thumbnail_size': str(self._thumbnail_size),
             'comments_enabled': '1' if self.comments_enabled else '0',
         }
+        files = {'files[]': filetuple}
 
-        files = {
-            'files[]': (
-                os.path.basename(filepath),
-                fileobj,
-                mimetype,
-            ),
-        }
-
+        # Upload image
         try:
             response = await self._client.post(
                 url=_const.PROCESS_URL,
@@ -263,58 +263,52 @@ class Gallery():
                 json=True,
             )
         except ConnectionError as e:
-            return Submission(success=False, error=str(e), **submission)
-
-        log.debug('POST response: %s', response)
-        if 'files' not in response:
-            raise RuntimeError(f"Unexpected response: Couldn't find 'files': {response}")
-        elif not isinstance(response['files'], list):
-            raise RuntimeError(f"Unexpected response: 'files' is not a list: {response}")
-        elif not response['files']:
-            raise RuntimeError(f"Unexpected response: 'files' is empty: {response}")
-
-        info = response['files'][0]
-        return Submission(
-            success=True,
-            filename=os.path.basename(filepath),
-            filepath=filepath,
-            image_url=info['original_url'],
-            thumbnail_url=info['thumbnail_url'],
-            web_url=info['url'],
-            gallery_url=self.url,
-            edit_url=self.edit_url,
-        )
+            return Submission(filepath=filepath, error=str(e))
+        else:
+            log.debug('POST response: %s', response)
+            info = response['files'][0]
+            return Submission(
+                filepath=filepath,
+                image_url=info['original_url'],
+                thumbnail_url=info['thumbnail_url'],
+                web_url=info['url'],
+                gallery_url=self.url,
+                edit_url=self.edit_url,
+            )
 
     async def upload(self, filepath):
         """
-        Upload image to this gallery, return Submission object
+        Upload image to this gallery
 
         filepath: Path to JPEG or PNG file
 
-        Raise RuntimeError if create() was not called first
+        Return Submission object.
         """
-        return await self._submit_file(filepath)
+        filepath, filetuple, error = self._prepare(filepath)[0]
+        return await self._upload_image(filepath, filetuple, error)
 
-    async def add(self, *filepaths):
+    async def add(self, filepaths):
         """
-        Upload images to this gallery, yield Submission objects
+        Upload images to this gallery
 
         This is typically used in an `async for` loop:
 
-        >>> async for submission in gallery.add("foo.jpg", "bar.jpg"):
+        >>> async for submission in gallery.add(["foo.jpg", "bar.jpg"]):
         >>>     print(submission)
 
         filepaths: Iterable of paths to JPEG or PNG files
 
-        Raise RuntimeError if create() was not called first
+        Yield Submission objects asynchronously.
         """
-        for filepath in filepaths:
-            yield await self._submit_file(filepath)
+        for filepath, filetuple, error in self._prepare(*filepaths):
+            yield await self._upload_image(filepath, filetuple, error)
 
     def __repr__(self):
-        return (f'{type(self).__name__}('
-                f'title={repr(self.title)}, '
-                f'thumb_width={repr(self.thumb_width)}, '
-                f'square_thumbs={repr(self.square_thumbs)}, '
-                f'adult={repr(self.adult)}, '
-                f'comments_enabled={repr(self.comments_enabled)})')
+        return (
+            f'{type(self).__name__}('
+            f'title={repr(self.title)}, '
+            f'thumb_width={repr(self.thumb_width)}, '
+            f'square_thumbs={repr(self.square_thumbs)}, '
+            f'adult={repr(self.adult)}, '
+            f'comments_enabled={repr(self.comments_enabled)})'
+        )

@@ -8,7 +8,7 @@ PROCESS_URL = f'https://{SERVICE_DOMAIN}/upload/process'
 EDIT_URL_FORMAT = f'https://{SERVICE_DOMAIN}/upload/edit/{{token_id}}/{{token_secret}}'
 GALLERY_URL_FORMAT = f'https://{SERVICE_DOMAIN}/g/{{gallery_id}}'
 
-THUMBNAIL_WIDTHS_SQUARE = {
+THUMBNAIL_SIZES_SQUARE = {
     150: '150c',
     200: '200c',
     250: '250c',
@@ -18,7 +18,7 @@ THUMBNAIL_WIDTHS_SQUARE = {
     800: '800c',
 }
 
-THUMBNAIL_WIDTHS_KEEP_ASPECT = {
+THUMBNAIL_SIZES_KEEP_ASPECT = {
     100: '100r',
     150: '150r',
     200: '200r',

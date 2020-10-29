@@ -44,19 +44,21 @@ def test_Gallery_properties_thumb_width_and_square_thumbs():
     g = Gallery(thumb_width=200, square_thumbs=False)
     assert g.thumb_width == 200
     assert g.square_thumbs is False
-    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[200]
+    assert g._thumbnail_size == _const.THUMBNAIL_SIZES_KEEP_ASPECT[200]
     g.square_thumbs = True
     assert g.thumb_width == 200
     assert g.square_thumbs is True
-    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_SQUARE[200]
+    assert g._thumbnail_size == _const.THUMBNAIL_SIZES_SQUARE[200]
     g.thumb_width = 321
     assert g.thumb_width == 300
     assert g.square_thumbs is True
-    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_SQUARE[300]
+    assert g._thumbnail_size == _const.THUMBNAIL_SIZES_SQUARE[300]
     g.square_thumbs = 0
     assert g.thumb_width == 300
     assert g.square_thumbs is False
-    assert g._thumbnail_width == _const.THUMBNAIL_WIDTHS_KEEP_ASPECT[300]
+    assert g._thumbnail_size == _const.THUMBNAIL_SIZES_KEEP_ASPECT[300]
+    with pytest.raises(ValueError, match=r"^Not a number: 'foo'$"):
+        g.thumb_width = 'foo'
 
 
 def test_Gallery_property_adult():
@@ -77,6 +79,26 @@ def test_Gallery_property_comments_enabled():
     assert g.comments_enabled is False
     g.comments_enabled = 1
     assert g.comments_enabled is True
+    g._gallery_token = 'mock token'
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'mock csrf'
+    with pytest.raises(RuntimeError, match=r'^Gallery was already created$'):
+        g.comments_enabled = False
+
+
+def test_Gallery_property_url():
+    g = Gallery()
+    assert g.url is None
+    g._gallery_token = {'gallery_id': 'mock token'}
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'mock csrf'
+    assert g.url == _const.GALLERY_URL_FORMAT.format(**g._gallery_token)
+
+
+def test_Gallery_property_edit_url():
+    g = Gallery()
+    assert g.edit_url is None
+    g._gallery_token = {'token_id': 'mock token', 'token_secret': 'mock secret'}
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'mock csrf'
+    assert g.edit_url == _const.EDIT_URL_FORMAT.format(**g._gallery_token)
 
 
 @pytest.mark.asyncio
@@ -137,250 +159,229 @@ async def test_Gallery_create_sets_session_header_and_token(client):
         await g.create()
 
 
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_before_create_was_called(client):
-    g = Gallery()
-    with pytest.raises(RuntimeError, match=r'^create\(\) must be called first$'):
-        await g._submit_file('this/file/does/not/exist.jpg')
-
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_cannot_open_file(client):
-    g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    s = await g._submit_file('this/file/does/not/exist.jpg')
-    assert s == {
-        'success': False,
-        'error': 'No such file or directory',
-        'filename': 'exist.jpg',
-        'filepath': 'this/file/does/not/exist.jpg',
-        'image_url': None,
-        'thumbnail_url': None,
-        'web_url': None,
-        'gallery_url': None,
-        'edit_url': None,
-    }
-
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_directory(client, tmp_path):
-    g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    s = await g._submit_file(tmp_path)
-    assert s == {
-        'success': False,
-        'error': 'Is a directory',
-        'filename': os.path.basename(tmp_path),
-        'filepath': tmp_path,
-        'image_url': None,
-        'thumbnail_url': None,
-        'web_url': None,
-        'gallery_url': None,
-        'edit_url': None,
-    }
-
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_too_large_file(client, tmp_path):
-    filepath = tmp_path / 'foo.png'
-    # Create sparse file
-    f = open(filepath, 'wb')
-    f.truncate(_const.MAX_FILE_SIZE + 1)
-    f.close()
-    g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    s = await g._submit_file(filepath)
-    assert s == {
-        'success': False,
-        'error': f'File is larger than {_const.MAX_FILE_SIZE} bytes',
-        'filename': 'foo.png',
-        'filepath': filepath,
-        'image_url': None,
-        'thumbnail_url': None,
-        'web_url': None,
-        'gallery_url': None,
-        'edit_url': None,
-    }
-
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_file_with_unknown_mimetype(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
-    mocker.patch('mimetypes.guess_type', return_value=(None, None))
-    mocker.patch('os.path.getsize', return_value=1048567)
-    g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    s = await g._submit_file('path/to/file.jpg')
-    assert s == {
-        'success': False,
-        'error': 'Unknown mime type',
-        'filename': 'file.jpg',
-        'filepath': 'path/to/file.jpg',
-        'image_url': None,
-        'thumbnail_url': None,
-        'web_url': None,
-        'gallery_url': None,
-        'edit_url': None,
-    }
-
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_file_with_unsupported_mimetype(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
-    mocker.patch('mimetypes.guess_type', return_value=('text/plain', None))
-    mocker.patch('os.path.getsize', return_value=1048567)
-    g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    s = await g._submit_file('path/to/file.txt')
-    assert s == {
-        'success': False,
-        'error': 'Unsupported file type: text/plain',
-        'filename': 'file.txt',
-        'filepath': 'path/to/file.txt',
-        'image_url': None,
-        'thumbnail_url': None,
-        'web_url': None,
-        'gallery_url': None,
-        'edit_url': None,
-    }
-
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_catches_ConnectionError_from_client(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
+def test_prepare_fails_to_open_file(mocker):
+    filepaths = [
+        'path/to/file0.jpg',
+        'path/file1.jpg',
+        'path/where/file2.jpg',
+    ]
+    mocker.patch('builtins.open', Mock(
+        side_effect=[
+            'fileobj0',
+            OSError('mock errno', 'No such file'),
+            'fileobj2',
+        ],
+    ))
+    mocker.patch('os.path.getsize', return_value=1048576)
     mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
-    mocker.patch('os.path.getsize', return_value=1048567)
     g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    client.post.side_effect = ConnectionError('Network is unreachable')
-    s = await g._submit_file('path/to/file.jpg')
-    assert s == {
-        'success': False,
-        'error': 'Network is unreachable',
-        'filename': 'file.jpg',
-        'filepath': 'path/to/file.jpg',
-        'image_url': None,
-        'thumbnail_url': None,
-        'web_url': None,
-        'gallery_url': None,
-        'edit_url': None,
-    }
-    assert client.post.call_args_list == [
-        call(
-            url=_const.PROCESS_URL,
-            data={
-                'token_id': g._gallery_token['token_id'],
-                'token_secret': g._gallery_token['token_secret'],
-                'content_type': g._content_type,
-                'thumbnail_size': g._thumbnail_width,
-                'gallery_id': g._gallery_token['gallery_id'],
-                'gallery_secret': g._gallery_token['gallery_secret'],
-                'comments_enabled': '0',
-            },
-            files={
-                'files[]': ('file.jpg', open('path/to/file.jpg'), 'image/jpeg'),
-            },
-            json=True,
-        ),
+    submissions = g._prepare(*filepaths)
+    assert submissions == [
+        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
+        (filepaths[1], None, 'No such file'),
+        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
     ]
 
-@pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_json_response_without_files_field(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
-    mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
-    mocker.patch('os.path.getsize', return_value=1048567)
+def test_prepare_cannot_determine_mimetype(mocker):
+    filepaths = [
+        'path/to/file0.jpg',
+        'path/file1',
+        'path/where/file2.jpg',
+    ]
+    mocker.patch('builtins.open', Mock(side_effect=['fileobj0', 'fileobj1', 'fileobj2']))
+    mocker.patch('os.path.getsize', return_value=1048576)
+    mocker.patch('mimetypes.guess_type', side_effect=[('image/jpeg', None),
+                                                      (None, None),
+                                                      ('image/jpeg', None)])
     g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    client.post.return_value = {'not files': 'asdf'}
-    with pytest.raises(RuntimeError) as cm:
-        await g._submit_file('path/to/file.jpg')
-    assert str(cm.value) == "Unexpected response: Couldn't find 'files': {'not files': 'asdf'}"
+    submissions = g._prepare(*filepaths)
+    assert submissions == [
+        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
+        (filepaths[1], None, 'Unknown file type'),
+        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
+    ]
+
+def test_prepare_detects_unsupported_mimetype(mocker):
+    filepaths = [
+        'path/to/file0.jpg',
+        'path/file1.txt',
+        'path/where/file2.jpg',
+    ]
+    mocker.patch('builtins.open', Mock(side_effect=['fileobj0', 'fileobj1', 'fileobj2']))
+    mocker.patch('os.path.getsize', return_value=1048576)
+    mocker.patch('mimetypes.guess_type', side_effect=[('image/jpeg', None),
+                                                      ('text/plain', None),
+                                                      ('image/jpeg', None)])
+    g = Gallery()
+    submissions = g._prepare(*filepaths)
+    assert submissions == [
+        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
+        (filepaths[1], None, 'Unsupported file type: text/plain'),
+        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
+    ]
+
+def test_prepare_finds_large_file(mocker):
+    filepaths = [
+        'path/to/file0.jpg',
+        'path/file1.jpg',
+        'path/where/file2.jpg',
+    ]
+    mocker.patch('builtins.open', Mock(side_effect=['fileobj0', 'fileobj1', 'fileobj2']))
+    mocker.patch('os.path.getsize', side_effect=[1048576, _const.MAX_FILE_SIZE + 1, 1048576])
+    mocker.patch('mimetypes.guess_type', side_effect=[('image/jpeg', None),
+                                                      ('image/jpeg', None),
+                                                      ('image/jpeg', None)])
+    g = Gallery()
+    submissions = g._prepare(*filepaths)
+    assert submissions == [
+        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
+        (filepaths[1], None, f'File is larger than {_const.MAX_FILE_SIZE} bytes'),
+        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
+    ]
+
 
 @pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_json_response_with_nonlist_files_field(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
-    mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
-    mocker.patch('os.path.getsize', return_value=1048567)
+async def test_upload_image_gets_error_and_filetuple_arguments(client):
     g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    client.post.return_value = {'files': 'asdf'}
-    with pytest.raises(RuntimeError) as cm:
-        await g._submit_file('path/to/file.jpg')
-    assert str(cm.value) == "Unexpected response: 'files' is not a list: {'files': 'asdf'}"
+    with patch.object(g, 'create'):
+        with pytest.raises(AssertionError, match=r'Arguments "filetuple" and "error" are mutually exclusive'):
+            await g._upload_image('foo.jpg', 'fileobj', 'Something went wrong')
+        assert g.create.call_args_list == []
 
 @pytest.mark.asyncio
-async def test_Gallery_submit_file_gets_json_response_with_files_field(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
-    mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
-    mocker.patch('os.path.getsize', return_value=1048567)
+async def test_upload_image_gets_error_via_argument(client):
     g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    client.post.return_value = {'files': []}
-    with pytest.raises(RuntimeError) as cm:
-        await g._submit_file('path/to/file.jpg')
-    assert str(cm.value) == "Unexpected response: 'files' is empty: {'files': []}"
+    with patch.object(g, 'create'):
+        sub = await g._upload_image('foo.jpg', None, 'Something went wrong')
+        assert sub == Submission(filepath='foo.jpg', error='Something went wrong')
+        assert g.create.call_args_list == []
 
 @pytest.mark.asyncio
-async def test_Gallery_submit_file_succeeds(client, mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='foo'))
-    mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
-    mocker.patch('os.path.getsize', return_value=1048567)
+async def test_upload_image_calls_create_if_necessary(client):
     g = Gallery()
-    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf token'
-    g._gallery_token = {'token_id': '123', 'token_secret': '456',
-                        'gallery_id': 'abc', 'gallery_secret': 'def'}
-    client.post.return_value = {
-        'files': [{'original_url': 'https://foo.example.org/asdf.jpg',
-                   'thumbnail_url': 'https://foo.example.org/asdf_t.jpg',
-                   'url': 'https://foo.example.org/asdf'}],
-    }
-    s = await g._submit_file('path/to/file.jpg')
-    assert s == Submission(
-        success=True,
-        filename='file.jpg',
-        filepath='path/to/file.jpg',
-        image_url='https://foo.example.org/asdf.jpg',
-        thumbnail_url='https://foo.example.org/asdf_t.jpg',
-        web_url='https://foo.example.org/asdf',
-        gallery_url=_const.GALLERY_URL_FORMAT.format(**g._gallery_token),
-        edit_url=_const.EDIT_URL_FORMAT.format(**g._gallery_token),
+
+    def set_tokens():
+        g._gallery_token = {'token_id': 'a', 'token_secret': 'b', 'gallery_id': 'c', 'gallery_secret': 'd'}
+        g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf_token'
+
+    with patch.object(g, 'create', new_callable=AsyncMock, side_effect=set_tokens):
+        mock_upload_response = {'files': [{
+            'original_url': 'http://image_url',
+            'thumbnail_url': 'http://thumbnail_url',
+            'url': 'http://web_url',
+        }]}
+        client.post.side_effect = [mock_upload_response] * 3
+        for i in range(3):
+            await g._upload_image(f'foo{i}.jpg', 'mock filetuple', None)
+            assert g.create.call_args_list == [call()]
+
+@pytest.mark.asyncio
+async def test_upload_image_catches_exception_from_create_request(client):
+    g = Gallery()
+    with patch.object(g, 'create', side_effect=ConnectionError('The Error')):
+        for i in range(3):
+            sub = await g._upload_image(f'foo{i}.jpg', 'mock filetuple', None)
+            assert sub == Submission(filepath=f'foo{i}.jpg', error='The Error')
+            assert g.create.call_args_list == [call()] * (i + 1)
+
+@pytest.mark.asyncio
+async def test_upload_image_catches_exception_from_upload_request(client):
+    g = Gallery()
+    g._gallery_token = {'token_id': 'a', 'token_secret': 'b', 'gallery_id': 'c', 'gallery_secret': 'd'}
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf_token'
+    client.post.side_effect = ConnectionError('The Error')
+    sub = await g._upload_image('foo.jpg', 'mock filetuple', None)
+    assert sub == Submission(filepath='foo.jpg', error='The Error')
+
+@pytest.mark.asyncio
+async def test_upload_image_makes_correct_upload_request(client):
+    g = Gallery()
+    g._gallery_token = {'token_id': 'a', 'token_secret': 'b', 'gallery_id': 'c', 'gallery_secret': 'd'}
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf_token'
+    client.post.return_value = {'files': [{
+        'original_url': 'http://image_url',
+        'thumbnail_url': 'http://thumbnail_url',
+        'url': 'http://web_url',
+    }]}
+    await g._upload_image('foo.jpg', 'mock filetuple', None)
+    assert client.post.call_args_list == [call(
+        url=_const.PROCESS_URL,
+        data={
+            'token_id': 'a',
+            'token_secret': 'b',
+            'gallery_id': 'c',
+            'gallery_secret': 'd',
+            'content_type': _const.CONTENT_TYPES['family'],
+            'thumbnail_size': _const.THUMBNAIL_SIZES_KEEP_ASPECT[100],
+            'comments_enabled': '0',
+        },
+        files={'files[]': 'mock filetuple'},
+        json=True,
+    )]
+
+@pytest.mark.asyncio
+async def test_upload_image_returns_submission(client):
+    g = Gallery()
+    g._gallery_token = {'token_id': 'a', 'token_secret': 'b', 'gallery_id': 'c', 'gallery_secret': 'd'}
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf_token'
+    client.post.return_value = {'files': [{
+        'original_url': 'http://image_url',
+        'thumbnail_url': 'http://thumbnail_url',
+        'url': 'http://web_url',
+    }]}
+    sub = await g._upload_image('foo.jpg', 'mock filetuple', None)
+    assert sub == Submission(
+        filepath='foo.jpg',
+        image_url='http://image_url',
+        thumbnail_url='http://thumbnail_url',
+        web_url='http://web_url',
+        gallery_url=g.url,
+        edit_url=g.edit_url,
     )
 
 
 @pytest.mark.asyncio
-async def test_Gallery_upload(client, mocker):
+async def test_upload(client):
     g = Gallery()
-    with patch.object(g, '_submit_file', AsyncMock()):
+    mock_prepare = Mock(return_value=[('mock filepath', 'mock filetuple', 'mock error')])
+    with patch.multiple(g, _prepare=mock_prepare, _upload_image=AsyncMock()):
         submission = await g.upload('path/to/foo.jpg')
-        assert g._submit_file.call_args_list == [call('path/to/foo.jpg')]
-        assert submission is g._submit_file.return_value
+        assert g._prepare.call_args_list == [call('path/to/foo.jpg')]
+        assert g._upload_image.call_args_list == [
+            call('mock filepath', 'mock filetuple', 'mock error'),
+        ]
+        assert submission is g._upload_image.return_value
 
 
 @pytest.mark.asyncio
 async def test_Gallery_add(client, mocker):
-    filepaths = ('path/to/foo.jpg', 'path/to/bar.jpg')
     g = Gallery()
-    with patch.object(g, '_submit_file', AsyncMock()):
-        submissions_expected = [
-            f'{filepath} submission' for filepath in filepaths
-        ]
-        submissions_seen = []
-        g._submit_file.side_effect = submissions_expected
-        async for submission in g.add(*filepaths):
-            submissions_seen.append(submission)
-        assert submissions_seen == submissions_expected
-        assert g._submit_file.call_args_list == [
-            call(filepath) for filepath in filepaths
-        ]
+    filepaths = ('path/to/foo.jpg', 'bar.jpg', 'something/baz.jpg')
+    mock_prepare = Mock(return_value=[
+        (f'{filepath}: mock filepath', f'{filepath}: mock filetuple', f'{filepath}: mock error')
+        for filepath in filepaths
+    ])
+    mock_upload_image = AsyncMock(side_effect=[
+        f'{filepath} submission'
+        for filepath in filepaths
+    ])
+    with patch.multiple(g, _prepare=mock_prepare, _upload_image=mock_upload_image):
+        submissions = [s async for s in g.add(filepaths)]
+        assert g._prepare.call_args_list == [call(*filepaths)]
+    assert submissions == [
+        'path/to/foo.jpg submission',
+        'bar.jpg submission',
+        'something/baz.jpg submission',
+    ]
+
+
+def test_repr(client):
+    g = Gallery(
+        title='Foo',
+        thumb_width=123,
+        square_thumbs=True,
+        adult=True,
+        comments_enabled=True,
+    )
+    assert repr(g) == ("Gallery(title='Foo', thumb_width=150, "
+                       "square_thumbs=True, adult=True, comments_enabled=True)")
