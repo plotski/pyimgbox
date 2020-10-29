@@ -1,0 +1,8 @@
+[run]
+source = pyimgbox
+command_line = -m pytest
+branch = True
+
+[report]
+show_missing = True
+skip_covered = False
