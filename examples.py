@@ -46,7 +46,7 @@ async def example3(filepaths):
                 print(submission)
 
 
-# Use upload() instead of add() fore more flexibility.
+# Use upload() instead of add() for more flexibility.
 
 async def example4(filepaths):
     async with pyimgbox.Gallery(title="Hello, World!") as gallery:
