@@ -61,7 +61,6 @@ class HTTPClient:
                 if e.response.status_code == 413:
                     raise ConnectionError(f'{request.url}: File too large')
                 else:
-                    print(repr(response.text))
                     raise ConnectionError(f'{request.url}: {response.text}')
 
         except httpx.NetworkError:

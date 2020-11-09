@@ -1,3 +1,7 @@
+2020-11-09 1.0.1
+  * Remove debugging print()
+
+
 2020-10-31 1.0.0
   * Move CLI tool into a separate project: https://github.com/plotski/imgbox-cli
   * Make everything asynchronous.
