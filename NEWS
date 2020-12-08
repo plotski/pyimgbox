@@ -1,3 +1,7 @@
+2020-12-08 1.0.2
+  * Remove left-over CLI entry point from setup script.
+
+
 2020-11-09 1.0.1
   * Remove debugging print()
 
