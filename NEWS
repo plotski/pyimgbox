@@ -1,5 +1,6 @@
 2020-12-08 1.0.2
   * Remove left-over CLI entry point from setup script.
+  * Try harder to provide some kind of error message.
 
 
 2020-11-09 1.0.1

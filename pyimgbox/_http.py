@@ -60,14 +60,19 @@ class HTTPClient:
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 413:
                     raise ConnectionError(f'{request.url}: File too large')
-                else:
+                elif response.text.strip():
                     raise ConnectionError(f'{request.url}: {response.text}')
+                else:
+                    raise ConnectionError(f'{request.url}: Unknown status error: {response.status_code}')
 
         except httpx.NetworkError:
             raise ConnectionError(f'{request.url}: Connection failed')
 
         except httpx.HTTPError as e:
-            raise ConnectionError(f'{request.url}: {e}')
+            if str(e).strip():
+                raise ConnectionError(f'{request.url}: {e}')
+            else:
+                raise ConnectionError(f'{request.url}: Unknown error')
 
         else:
             if json:
