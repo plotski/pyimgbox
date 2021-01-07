@@ -1,3 +1,7 @@
+2021-01-07 1.0.3
+  * Fix "Unsupported file type: <some weird MIME type>" error message.
+
+
 2020-12-08 1.0.2
   * Remove left-over CLI entry point from setup script.
   * Try harder to provide some kind of error message.

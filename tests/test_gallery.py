@@ -173,51 +173,12 @@ def test_prepare_fails_to_open_file(mocker):
         ],
     ))
     mocker.patch('os.path.getsize', return_value=1048576)
-    mocker.patch('mimetypes.guess_type', return_value=('image/jpeg', None))
     g = Gallery()
     submissions = g._prepare(*filepaths)
     assert submissions == [
-        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
+        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0'), None),
         (filepaths[1], None, 'No such file'),
-        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
-    ]
-
-def test_prepare_cannot_determine_mimetype(mocker):
-    filepaths = [
-        'path/to/file0.jpg',
-        'path/file1',
-        'path/where/file2.jpg',
-    ]
-    mocker.patch('builtins.open', Mock(side_effect=['fileobj0', 'fileobj1', 'fileobj2']))
-    mocker.patch('os.path.getsize', return_value=1048576)
-    mocker.patch('mimetypes.guess_type', side_effect=[('image/jpeg', None),
-                                                      (None, None),
-                                                      ('image/jpeg', None)])
-    g = Gallery()
-    submissions = g._prepare(*filepaths)
-    assert submissions == [
-        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
-        (filepaths[1], None, 'Unknown file type'),
-        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
-    ]
-
-def test_prepare_detects_unsupported_mimetype(mocker):
-    filepaths = [
-        'path/to/file0.jpg',
-        'path/file1.txt',
-        'path/where/file2.jpg',
-    ]
-    mocker.patch('builtins.open', Mock(side_effect=['fileobj0', 'fileobj1', 'fileobj2']))
-    mocker.patch('os.path.getsize', return_value=1048576)
-    mocker.patch('mimetypes.guess_type', side_effect=[('image/jpeg', None),
-                                                      ('text/plain', None),
-                                                      ('image/jpeg', None)])
-    g = Gallery()
-    submissions = g._prepare(*filepaths)
-    assert submissions == [
-        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
-        (filepaths[1], None, 'Unsupported file type: text/plain'),
-        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
+        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2'), None),
     ]
 
 def test_prepare_finds_large_file(mocker):
@@ -228,15 +189,12 @@ def test_prepare_finds_large_file(mocker):
     ]
     mocker.patch('builtins.open', Mock(side_effect=['fileobj0', 'fileobj1', 'fileobj2']))
     mocker.patch('os.path.getsize', side_effect=[1048576, _const.MAX_FILE_SIZE + 1, 1048576])
-    mocker.patch('mimetypes.guess_type', side_effect=[('image/jpeg', None),
-                                                      ('image/jpeg', None),
-                                                      ('image/jpeg', None)])
     g = Gallery()
     submissions = g._prepare(*filepaths)
     assert submissions == [
-        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0', 'image/jpeg'), None),
+        (filepaths[0], (os.path.basename(filepaths[0]), 'fileobj0'), None),
         (filepaths[1], None, f'File is larger than {_const.MAX_FILE_SIZE} bytes'),
-        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2', 'image/jpeg'), None),
+        (filepaths[2], (os.path.basename(filepaths[2]), 'fileobj2'), None),
     ]
 
 

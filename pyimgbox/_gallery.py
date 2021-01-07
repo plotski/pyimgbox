@@ -1,5 +1,4 @@
 import logging
-import mimetypes
 import os
 
 import bs4
@@ -198,15 +197,8 @@ class Gallery():
             except OSError as e:
                 files.append((filepath, None, e.strerror))
             else:
-                # Check mime type
-                mimetype = mimetypes.guess_type(filepath)[0]
-                if not mimetype:
-                    files.append((filepath, None, 'Unknown file type'))
-                elif mimetype not in _const.ALLOWED_MIMETYPES:
-                    files.append((filepath, None, f'Unsupported file type: {mimetype}'))
-
                 # Check file size limit
-                elif os.path.getsize(filepath) > _const.MAX_FILE_SIZE:
+                if os.path.getsize(filepath) > _const.MAX_FILE_SIZE:
                     files.append((
                         filepath,
                         None,
@@ -215,7 +207,7 @@ class Gallery():
 
                 # Store the tuple we need for the POST request
                 else:
-                    filetuple = (os.path.basename(filepath), fileobj, mimetype)
+                    filetuple = (os.path.basename(filepath), fileobj)
                     files.append((filepath, filetuple, None))
 
         return files
@@ -225,7 +217,7 @@ class Gallery():
         Upload image file
 
         filepath: Path to image file
-        filetuple: (file name, file object, MIME type)
+        filetuple: (file name, file object)
         error: Error message or None
 
         Return Submission object.
