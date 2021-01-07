@@ -1,4 +1,4 @@
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__ = 'plotski'
 __author_email__ = 'plotski@example.org'
 
