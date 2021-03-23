@@ -1,4 +1,5 @@
 import os
+import re
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -276,6 +277,26 @@ async def test_upload_image_makes_correct_upload_request(client):
         files={'files[]': 'mock filetuple'},
         json=True,
     )]
+
+@pytest.mark.parametrize(
+    argnames='unexpected_response, exp_cause, exp_cause_msg',
+    argvalues=(
+        ('foo', TypeError, 'string indices must be integers'),
+        ({'foo': [1, 2, 3]}, KeyError, "'files'"),
+        ({'files': [1, 2, 3]}, TypeError, "'int' object is not subscriptable"),
+        ({'files': [{'foo': 1, 'bar': 2}]}, KeyError, "'original_url'"),
+    ),
+)
+@pytest.mark.asyncio
+async def test_upload_image_catches_unexpected_response(unexpected_response, exp_cause, exp_cause_msg, client):
+    g = Gallery()
+    g._gallery_token = {'token_id': 'a', 'token_secret': 'b', 'gallery_id': 'c', 'gallery_secret': 'd'}
+    g._client.headers[_const.CSRF_TOKEN_HEADER] = 'csrf_token'
+    client.post.return_value = unexpected_response
+    with pytest.raises(RuntimeError, match=rf'Unexpected response: {re.escape(repr(unexpected_response))}$') as exc_info:
+        await g._upload_image('foo.jpg', 'mock filetuple', None)
+    assert isinstance(exc_info.value.__cause__, exp_cause)
+    assert str(exc_info.value.__cause__) == exp_cause_msg
 
 @pytest.mark.asyncio
 async def test_upload_image_returns_submission(client):

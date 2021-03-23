@@ -258,12 +258,19 @@ class Gallery():
             return Submission(filepath=filepath, error=str(e))
         else:
             log.debug('POST response: %s', response)
-            info = response['files'][0]
+            try:
+                info = response['files'][0]
+                image_url = info['original_url']
+                thumbnail_url = info['thumbnail_url']
+                web_url = info['url']
+            except (KeyError, IndexError, TypeError) as e:
+                log.debug('Unexpected response: %r', response)
+                raise RuntimeError(f'Unexpected response: {response!r}') from e
             return Submission(
                 filepath=filepath,
-                image_url=info['original_url'],
-                thumbnail_url=info['thumbnail_url'],
-                web_url=info['url'],
+                image_url=image_url,
+                thumbnail_url=thumbnail_url,
+                web_url=web_url,
                 gallery_url=self.url,
                 edit_url=self.edit_url,
             )
