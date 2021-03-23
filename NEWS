@@ -1,5 +1,10 @@
+2021-03-23 1.0.5
+  * Remove remnant CLI file.
+  * Better error message when upload response from server has unexpected format.
+
+
 2021-03-15 1.0.4
-  * Loosen httpx version restriction
+  * Loosen httpx version restriction.
 
 
 2021-01-07 1.0.3
