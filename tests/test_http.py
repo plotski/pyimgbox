@@ -2,11 +2,12 @@ import io
 import re
 
 import pytest
+import pytest_asyncio
 
 from pyimgbox import _http
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client():
     async with _http.HTTPClient() as client:
         yield client

@@ -3,6 +3,7 @@ import re
 from unittest.mock import Mock, call, patch
 
 import pytest
+import pytest_asyncio
 
 from pyimgbox import Gallery, Submission, _const
 from pyimgbox._http import HTTPClient
@@ -16,7 +17,7 @@ class AsyncMock(Mock):
         return coro()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(mocker):
     mocker.patch('pyimgbox._http.HTTPClient.get', AsyncMock())
     mocker.patch('pyimgbox._http.HTTPClient.post', AsyncMock())
