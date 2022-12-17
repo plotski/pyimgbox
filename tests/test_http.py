@@ -61,7 +61,8 @@ async def test_get_gets_http_error_status(client, httpserver):
 @pytest.mark.asyncio
 async def test_get_gets_invalid_url(client):
     url = 'foo:-1'
-    with pytest.raises(ConnectionError, match=f"^{url}: Unsupported URL protocol 'foo'$"):
+    exp_msg = "/-1: Request URL is missing an 'http://' or 'https://' protocol."
+    with pytest.raises(ConnectionError, match=f"^{re.escape(str(exp_msg))}$"):
         await client.get(url)
 
 @pytest.mark.asyncio
@@ -97,14 +98,13 @@ async def test_post_sends_headers(client, httpserver):
 
 @pytest.mark.asyncio
 async def test_post_sends_data(client, httpserver):
-    data = b'asdf'
     httpserver.expect_request(
         uri='/foo',
         method='POST',
-        data=data,
+        data=b'foo=bar',
     ).respond_with_data('bar')
     url = httpserver.url_for('/foo')
-    response = await client.post(url, data=data)
+    response = await client.post(url, data={'foo': 'bar'})
     assert response == 'bar'
 
 # FIXME: pytest-httpserver doesn't support multipart file uploads, but we can
