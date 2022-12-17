@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -282,7 +283,12 @@ async def test_upload_image_makes_correct_upload_request(client):
 @pytest.mark.parametrize(
     argnames='unexpected_response, exp_cause, exp_cause_msg',
     argvalues=(
-        ('foo', TypeError, 'string indices must be integers'),
+        ('foo', TypeError, (
+            "string indices must be integers, not 'str'"
+            if sys.version_info >= (3, 11)
+            else
+            'string indices must be integers'
+        )),
         ({'foo': [1, 2, 3]}, KeyError, "'files'"),
         ({'files': [1, 2, 3]}, TypeError, "'int' object is not subscriptable"),
         ({'files': [{'foo': 1, 'bar': 2}]}, KeyError, "'original_url'"),
